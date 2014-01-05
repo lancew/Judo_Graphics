@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		
+		<title>Ractive Template for IASAS Swimming 2014</title>
+		<script src="//ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<script src='http://rawgithub.com/RactiveJS/Ractive/master/Ractive.js'></script>
+
+	</head>
+
+	<body>
+		<div id='container'>
+			<div id='results'>
+			</div>
+		</div>
+
+
+
+
+
+
+
+
+		<script id='results_template' type='text/ractive'>
+			<h1>Race</h1>
+			<h2>Results</h2>
+			<ul class='results_list'>
+
+				{{#dataset}}
+					<li class='{{lowercase(school_abbreviation)}}'>
+						<h3>{{school_abbreviation}}</h3>
+						<h4>{{swimmer_name}}</h4>
+						<h5>{{time}}</h5>
+					</li>
+				{{/dataset}}
+			</ul>			
+		</script>
+
+
+		<script>
+			$(document).ready(function() {
+
+				var results_hashtable = [
+					{ 	
+						school_abbreviation: 'TAS',
+						swimmer_name: 'Phillip Teng',
+						time: '0.0'
+					},
+					{ 	
+						school_abbreviation: 'TAS',
+						swimmer_name: 'Phillip Teng',
+						time: '0.0'
+					},
+					{ 	
+						school_abbreviation: 'TAS',
+						swimmer_name: 'Phillip Teng',
+						time: '0.0'
+					},
+					{ 	
+						school_abbreviation: 'TAS',
+						swimmer_name: 'Phillip Teng',
+						time: '0.0'
+					},
+					{
+						school_abbreviation: 'TAS',
+						swimmer_name: 'Phillip Teng',
+						time: '0.0'					
+					}
+				];
+
+				var ractive = new Ractive({
+					el: '#results',
+					template: '#results_template',
+					data: { 
+						dataset: results_hashtable,
+						capitalize: function(string) {
+							return string.toUpperCase();
+						},
+						lowercase: function(string) {
+							return string.toLowerCase();
+						}
+
+
+					 }
+				});
+			});
+		</script>
+
+	</body>
+</html>

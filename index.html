@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>IASAS Swimming 2014 Controller</title>
+		<link rel="shortcut icon" href="./img/favicon.png"/>
+
+		<link rel="stylesheet" href="./todc-bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="./todc-bootstrap/css/todc-bootstrap.min.css">
+		<link rel="stylesheet/less" type="text/css" href="style.less">
+
+		<script src="//code.jquery.com/jquery-latest.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
+
+		<script>
+			$(document).ready(function() {
+				var viewModel = {
+					race_headings: {
+						title: ko.observable(""),
+						match: ko.observable(""),
+						length: ko.observable("")
+					},
+					gfx_type: ko.observable("8"),
+					selected_swimmer: ko.observable("1"),
+
+					swimmers: ko.observableArray([
+						{ lane: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "4", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "5", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "6", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
+					])
+
+
+				};
+
+
+
+				ko.applyBindings(viewModel);
+				setInterval(function() {console.log(ko.toJSON(viewModel));},1000);
+
+
+				setInterval(function() {localStorage.setItem("viewmodel-state",ko.toJSON(viewModel));},1000);
+			});
+		</script>
+
+	</head>
+	<body>
+		<div class='inline'>
+			<div id='cont_title'>
+				<h4 style='margin-top:0'>Race Title</h4>
+				<input type="text" class="form-control" placeholder="Race Title" data-bind="value: race_headings.title, valueUpdate: 'afterkeydown'">
+				<div id='field_match'>
+					<h4>Match</h4>
+					<input type="text" class="form-control" placeholder="Heat #, Semi, Final" data-bind="value: race_headings.match, valueUpdate: 'afterkeydown'">
+				</div>
+				<div id='field_length'>
+					<h4>Length</h4>
+					<input type="text" class="form-control" placeholder="Meters" data-bind="value: race_headings.length, valueUpdate: 'afterkeydown'">
+				</div>
+			</div>
+
+			<div id='cont_swimmer' style='width:400px;'>
+				<div class='header swimmer_row'>
+					<h5 style='width:5%'>#</h5>
+					<div style='width:7.5%'></div>
+					<h5 style='width:15%'>School</h5>
+					<h5 style='width:53.5%'>Name</h5>
+					<h5 style='width:15%'>Time</h5>
+				</div>
+
+				<!-- DATA-BIND FOR LOOP -->
+				<div data-bind="foreach: swimmers">
+					<div class='swimmer_row'>
+						<h5 style='width:5%' data-bind='text:lane'></h5>
+						<div style='width:7.5%'>
+							<input type="radio" name="lane_number" data-bind='value:lane, checked:$root.selected_swimmer'>
+						</div>
+						<input style='width:15%' type="text" class="form-control" placeholder="School" data-bind="value: school, valueUpdate: 'afterkeydown'">
+						<input style='width:53.5%' type="text" class="form-control" placeholder="Name" data-bind="value: name, valueUpdate: 'afterkeydown'">
+						<input style='width:15%' type="text" class="form-control" placeholder="Time" data-bind="value: time, valueUpdate: 'afterkeydown'">
+					</div>
+				</div>
+				<!-- DATA-BIND FOR LOOP -->
+			</div>
+		</div>
+
+		<div class='inline' id='right_pane' style='margin-left:20px;border-right: 1px solid #DDDDDD;'>
+			<div id="cont_gfx_preview">
+				<img src='img/results.png'>
+			</div>
+
+			<div id='cont_gfx_type' style='display:inline-block;'>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="1">Race Introduction</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="2">Start List</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="3">Nameplate</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="4">Lane Overlay</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="5">Winner</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="6">Results</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="7">Team Scores</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="8">CLEAR GRAPHICS</label>
+				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="9">Splits and Running Time</label>
+				<a class='btn btn-danger' id='update'>On Air <span class='fn_key'>(F9)</span></a>
+			</div>
+		</div>
+
+
+		<div id='button_container' style='margin-top:10px;'>
+			<a class='btn btn-primary' onclick='next_half_inning()'>Next Swimmer <span class="fn_key">(F8)</span></a>
+			<a class='btn btn-success' onclick="reset_count()">Placehold (R)</a>
+			<a class='btn btn-default' onclick='increment_outs()'>Placehold (O)</a>
+		</div>
+
+		<div class='inline' style='width:400px;margin-top:15px;'>
+			<select size='10' class="form-control inline" style='width:240px;'>
+				<option value="Apple">3_Boys_100M_Freestyle_H0.csv</option>
+				<option value="Banana">Banana</option>
+				<option value="Orange">Orange</option>
+				<option value="Pear">Pear</option>
+				<option value="Peach">Peach</option>
+			</select>
+			<div style='width: 156px;' class='inline bottom'>
+				<a class='btn btn-default' onclick="reset_count()">Import File</a>
+				<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import Selected <span class="fn_key">(F2)</span></a>
+			</div>
+		</div>
+
+		<div class='inline' style='width:220px;margin-top:15px;'>
+			<textarea class="form-control" rows="8" style='font-size: 12px;'></textarea>
+			<a class='btn btn-default' style='margin-top:5px;' onclick="reset_count()">Clear</a>
+			<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import <span class="fn_key">(F2)</span></a>
+
+		</div>
+
+
+
+
+
+		
+		
+		
+	</body>
+</html>

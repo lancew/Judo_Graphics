@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>Document</title>
+		<script src='http://rawgithub.com/RactiveJS/Ractive/master/Ractive.js'></script>
+
+	</head>
+	<body>
+		<h1>My blank page</h1>
+
+		<div id='container'></div>
+
+		<script id='myTemplate' type='text/ractive'>
+			<p>{{greeting}}, {{recipient}}!</p>
+		</script>
+
+		<script>
+			var ractive = new Ractive({
+				el: 'container',
+				template: '#myTemplate',
+				data: { greeting: 'Hello', recipient: 'world' }
+			});
+		</script>
+	</body>
+</html>
