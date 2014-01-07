@@ -12,10 +12,12 @@
 		<script src="//code.jquery.com/jquery-latest.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>
 
 		<script>
 			$(document).ready(function() {
-				var viewModel = {
+				var debug_mode = 0;
+				var vm = {
 					race_headings: {
 						title: ko.observable(""),
 						match: ko.observable(""),
@@ -34,17 +36,68 @@
 						{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
 						{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
 					])
-
-
 				};
 
+				vm.preview_image = ko.computed(function() {
+					img_array = ["race_intro", "start_list", "nameplate", "lane_overlay", "winner", "results", "team_scores", "clear", "clear"];
+					return "/img/" + img_array[parseInt(this.gfx_type())-1] + ".png";
+				}, vm);
 
+				var viewModel = ko.mapping.fromJS(vm);
+
+
+				if(localStorage.getItem("viewmodel-state") !== null || debug_mode) {
+					console.log(JSON.parse(localStorage.getItem("viewmodel-state")));
+					ko.mapping.fromJS(JSON.parse(localStorage.getItem("viewmodel-state")), viewModel);
+				}
+				/*
+				if(localStorage.getItem("viewmodel-state") === null || debug_mode) {
+					var viewModel = {
+						race_headings: {
+							title: ko.observable(""),
+							match: ko.observable(""),
+							length: ko.observable("")
+						},
+						gfx_type: ko.observable("8"),
+						selected_swimmer: ko.observable("1"),
+
+						swimmers: ko.observableArray([
+							{ lane: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "4", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "5", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "6", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+							{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
+						])
+					};
+
+					viewModel.preview_image = ko.computed(function() {
+						img_array = ["race_intro", "start_list", "nameplate", "lane_overlay", "winner", "results", "team_scores", "clear", "clear"];
+						return "/img/" + img_array[parseInt(this.gfx_type())-1] + ".png";
+					}, viewModel);
+
+				} else {
+					// If viewmodel-state key exists in localStorage, use it instead of creating a new one
+					var viewModel = ko.mapping.fromJS(JSON.parse(localStorage.getItem("viewmodel-state")));
+				}
+				*/
 
 				ko.applyBindings(viewModel);
-				setInterval(function() {console.log(ko.toJSON(viewModel));},1000);
 
 
-				setInterval(function() {localStorage.setItem("viewmodel-state",ko.toJSON(viewModel));},1000);
+
+				setInterval(function() {
+				}, 1000);
+
+
+				setInterval(function() {
+					temp = ko.mapping.toJS(viewModel);
+					delete temp.__ko_mapping__;
+					delete temp.preview_image;
+					localStorage.setItem("viewmodel-state", JSON.stringify(temp));
+				}, 1000);
 			});
 		</script>
 
@@ -88,10 +141,10 @@
 				<!-- DATA-BIND FOR LOOP -->
 			</div>
 		</div>
-
+	
 		<div class='inline' id='right_pane' style='margin-left:20px;border-right: 1px solid #DDDDDD;'>
 			<div id="cont_gfx_preview">
-				<img src='img/results.png'>
+				<img src='img/results.png' data-bind="attr: {src: preview_image}">
 			</div>
 
 			<div id='cont_gfx_type' style='display:inline-block;'>
