@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8">
+		<title>IASAS Swimming 2014 Graphics Displayer</title>
+		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>		
+		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>
+
+		<script>
+  $(document).ready(function() {				
+			//var peer = new Peer('15107514', {key: '281sa29bxa8aor', debug: 3}); 
+			var peer = new Peer('15107514', {key: 'peerjs', debug: 3, host:'107.170.0.13', port:9000}); 
+			
+			peer.on('connection', function(conn) {
+				conn.on('data', function(data){
+					// Will print 'hi!'
+					console.log(data);
+					$("h1").html(data);
+
+
+				});
+			});
+	});
+		</script>
+	</head>
+
+	<body>
+		<h1 id='time'></h1>
+
+
+	</body>
+</html>

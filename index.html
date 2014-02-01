@@ -7,15 +7,112 @@
 
 		<link rel="stylesheet" href="./todc-bootstrap/css/bootstrap.min.css">
 		<link rel="stylesheet" href="./todc-bootstrap/css/todc-bootstrap.min.css">
+		<link rel="stylesheet" href="jquery-ui-1.10.4.custom.min.css">
 		<link rel="stylesheet/less" type="text/css" href="style.less">
 
+		<script type="text/javascript">var less=less||{};less.env='development';</script>
 		<script src="//code.jquery.com/jquery-latest.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+		<script src="http://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.9.3/typeahead.min.js"></script>
 
-		<script>
-			$(document).ready(function() {
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+
+		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>		
+		<script src="./static/autobahn.min.js"></script>
+
+		<!-- WebRTC -->
+		<script> 
+			$(document).ready(function() {		
+				/******* WebRTC to Displayer ********/
+				var peer = new Peer({key: 'peerjs', debug: 0, host:'107.170.0.13', port:9000}); 
+
+				var conn = peer.connect('15107514');
+				
+				conn.on('error', function(err) {
+					console.log(err);
+				});	
+
+				conn.on('open', function(){
+					conn.send('hi!');
+					console.log("SENT");
+				});
+	
+
+				/******* WebSockets Serial Interface ********/
+				var sess = null; var wsuri = "ws://" + window.location.hostname + ":9000"; var retryCount = 0; var retryDelay = 2;
+
+				function connect() {
+					statusline = document.getElementById('statusline');
+					sess = new ab.Session(wsuri,
+						function() {
+							statusline.innerHTML = "Connected to " + wsuri;
+							console.log("Connected to " + wsuri);
+							retryCount = 0;
+							sess.prefix("event", "http://example.com/mcu#");
+							sess.subscribe("event:analog-value", receiveSerialData);
+							sess.prefix("rpc", "http://example.com/mcu-control#");
+						},
+						function() {
+							console.log(retryCount);
+							retryCount = retryCount + 1;
+							statusline.innerHTML = "Connection lost. Reconnecting (" + retryCount + ") in " + retryDelay + " secs ..";
+							window.setTimeout(connect, retryDelay * 1000);
+						}
+					);
+				}
+
+				window.onload = function () {
+					connect();
+				};
+
+				function receiveSerialData(topicUri, data) {
+					console.log(data);
+					conn.send(data);
+
+					var $code = $("<code>", {id: "foo", class: "a", text: data});
+					$("#controls_right_serial").append($code);
+					document.getElementById('controls_right_serial').scrollTop = 10000;
+
+
+				}
+
+
+				/******* MISCELLANEOUS - JQUERY SETUPS, LOCALSTORAGE CHECKS, ETC ********/
+				$.ajaxSetup({ cache: false, async: false});
+
+				if(localStorage.getItem("localStorage_heats_counter") == null) { // Counter to numerically order heat lists
+					localStorage.setItem("localStorage_heats_counter", 0);
+				}
+
+				if(localStorage.getItem("json_roster") == null) { // Import json roster to localStorage cache
+					$.getJSON("rosters/rosters.json", function(data) {
+						localStorage.setItem("json_roster", JSON.stringify(data));
+						roster_object = data;
+					});
+				} else roster_object = JSON.parse(localStorage.getItem("json_roster"));
+
+				if(localStorage.getItem("json_races") == null) { // Import json races to localStorage cache
+					$.getJSON("rosters/races.json", function(data) {
+						localStorage.setItem("json_races", JSON.stringify(data));
+						races_object = data;
+					});
+				} else races_object = JSON.parse(localStorage.getItem("json_races"));
+
+
+
+				ko.bindingHandlers.ko_autocomplete = {
+					init: function (element, params) {
+						$(element).autocomplete(params());
+					},
+					update: function (element, params) {
+						$(element).autocomplete("option", "source", params().source);
+					}
+				};
+
+
 				var debug_mode = 0;
 				var vm = {
 					race_headings: {
@@ -23,6 +120,15 @@
 						match: ko.observable(""),
 						length: ko.observable("")
 					},
+
+					selected_heatsheet: ko.observable(""),
+					myItems: ko.observableArray([
+						{ path: 'Item 1', value: "1" },
+						{ path: 'Item 3', value: "3" },
+						{ path: 'Item 4', value: "4" }
+					]),
+
+
 					gfx_type: ko.observable("8"),
 					selected_swimmer: ko.observable("1"),
 
@@ -35,7 +141,136 @@
 						{ lane: "6", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
 						{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
 						{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
-					])
+					]),
+
+					/* Clear all form fields - swimmer names, school, time, title and length */
+					clear_all_form_fields: function() {
+						this.swimmers.removeAll();
+						for(x = 0; x < 8; x++) {
+							laneNumber = x+1;							
+							obj = {lane: ko.observable(laneNumber.toString()), school: ko.observable(""), name: ko.observable(""), time: ko.observable("")};
+							this.swimmers.push(obj);
+						}
+						this.race_headings.title("");
+						this.race_headings.length("");
+					},
+
+					/* Return ["Preliminaries", "Semifinals", "Finals"] */
+					getAutocompleteMatches: function() {
+						return ["Preliminaries", "Semifinals", "Finals"];
+					},
+
+					fillSchoolBasedOnName: function(koObj) {
+						setTimeout(function() { // Time out - update school AFTER autocomplete finishes from onBlur
+							console.log(koObj);
+							swimmer_obj = $.grep(roster_object, function(e) { return e.fullname == koObj.name(); });
+							koObj.school(swimmer_obj[0]["school"]);
+
+						}, 20);
+						return true;
+					},
+
+					/* Return list of fullnames from full JSON roster for autocomplete */
+					getAutocompleteNames: function() {
+						var keys = $.map(roster_object, function(obj, key) {
+							return obj.fullname;
+						});
+						return keys;
+					},
+
+					fillLengthBasedOnRace: function(koObj) {
+						setTimeout(function() { // Time out - update length AFTER autocomplete finishes from onBlur
+							console.log(koObj);
+							race_obj = $.grep(races_object, function(e) { return e.race == koObj.race_headings.title(); });
+							console.log(race_obj);
+							koObj.race_headings.length(race_obj[0]["length"]);
+						}, 20);
+						return true;
+					},
+
+					/* Return list of races from full JSON races for autocomplete */
+					getAutocompleteRaces: function() {
+						var keys = $.map(races_object, function(obj, key) {
+							return obj.race;
+						});
+						return keys;
+					},
+
+					/* Increment selected swimmer */
+					next_swimmer: function() {
+						val = parseInt(viewModel.selected_swimmer()) + 1;
+						if(val > 8) val = 1;
+						this.selected_swimmer(val.toString());
+					},
+
+					/* Update list of imported heat sheets */
+					updateHeatList: function() {
+						obj = [];
+
+						for(var x = 0, len = localStorage.length; x < len; x++) {
+							var key = localStorage.key(x);							
+							if(key.substring(1,2) == "_" || key.substring(2,3) == "_" || key.substring(3,4) == "_") {
+								obj.push({path: key, value: key});
+							}
+						}
+
+						function compare(a,b) {
+							a = parseInt(a.value.split("_")[0]);
+							b = parseInt(b.value.split("_")[0]);
+							if (a < b) return -1;
+							if (a > b) return 1;
+							return 0;
+						}
+						obj = obj.sort(compare);
+						viewModel.myItems(obj);
+					},
+
+					/* Delete saved heat sheet from localStorage */
+					deleteHeatList: function() {
+						localStorage.removeItem(viewModel.selected_heatsheet());
+						viewModel.updateHeatList();
+					},
+
+					on_air_submit: function() {
+						console.log("LOL");
+						temp = ko.mapping.toJSON(viewModel);
+						conn.send(temp);
+					},
+
+					import_heat_sheet: function() {
+						rxObj = localStorage.getItem(this.selected_heatsheet());
+						rxObj = JSON.parse(rxObj);
+
+						this.swimmers.removeAll();
+						for(x = 0; x < 8; x++) {
+							laneNumber = x+1;
+							swimmer = rxObj.swimmers[x];
+							obj = {lane: ko.observable(laneNumber.toString()), school: ko.observable(swimmer.school), name: ko.observable(swimmer.name), time: ko.observable(swimmer.time)};
+							this.swimmers.push(obj);
+						}
+
+						this.race_headings.title(rxObj.race_headings.title);
+						this.race_headings.match(rxObj.race_headings.match);
+						this.race_headings.length(rxObj.race_headings.length);
+					},
+
+					/* Save current displayed heat to a LocalStorage key */
+					save_heat_to_localstorage: function() {
+						tempVM = ko.mapping.toJS(this);
+						var obj = {	
+							race_headings: tempVM["race_headings"],
+							swimmers: tempVM["swimmers"]
+						};
+
+						key = localStorage.getItem("localStorage_heats_counter") + "_" + obj.race_headings["title"] + "_" + obj.race_headings["match"];
+						localStorage.setItem(key, JSON.stringify(obj));
+
+						localStorage.setItem("localStorage_heats_counter", parseInt(localStorage.getItem("localStorage_heats_counter"))+1); // Increment counter
+
+						console.log(obj);
+						this.updateHeatList();
+					}
+
 				};
 
 				vm.preview_image = ko.computed(function() {
@@ -43,152 +278,154 @@
 					return "/img/" + img_array[parseInt(this.gfx_type())-1] + ".png";
 				}, vm);
 
+
+
 				var viewModel = ko.mapping.fromJS(vm);
 
+				viewModel.updateHeatList();
 
 				if(localStorage.getItem("viewmodel-state") !== null || debug_mode) {
 					console.log(JSON.parse(localStorage.getItem("viewmodel-state")));
 					ko.mapping.fromJS(JSON.parse(localStorage.getItem("viewmodel-state")), viewModel);
 				}
-				/*
-				if(localStorage.getItem("viewmodel-state") === null || debug_mode) {
-					var viewModel = {
-						race_headings: {
-							title: ko.observable(""),
-							match: ko.observable(""),
-							length: ko.observable("")
-						},
-						gfx_type: ko.observable("8"),
-						selected_swimmer: ko.observable("1"),
 
-						swimmers: ko.observableArray([
-							{ lane: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "4", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "5", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "6", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
-							{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
-						])
-					};
-
-					viewModel.preview_image = ko.computed(function() {
-						img_array = ["race_intro", "start_list", "nameplate", "lane_overlay", "winner", "results", "team_scores", "clear", "clear"];
-						return "/img/" + img_array[parseInt(this.gfx_type())-1] + ".png";
-					}, viewModel);
-
-				} else {
-					// If viewmodel-state key exists in localStorage, use it instead of creating a new one
-					var viewModel = ko.mapping.fromJS(JSON.parse(localStorage.getItem("viewmodel-state")));
-				}
-				*/
 
 				ko.applyBindings(viewModel);
 
 
 
-				setInterval(function() {
-				}, 1000);
 
 
 				setInterval(function() {
 					temp = ko.mapping.toJS(viewModel);
 					delete temp.__ko_mapping__;
 					delete temp.preview_image;
+					delete temp.updateHeatList;
+					delete temp.save_heat_to_localstorage;
+					delete temp.import_heat_sheet;
+					delete temp.on_air_submit;
+					delete temp.deleteHeatList;
+					delete temp.next_swimmer;
+					delete temp.getAutocompleteNames;
+					delete temp.fillSchoolBasedOnName;
+					delete temp.getAutocompleteRaces;
+					delete temp.fillLengthBasedOnRace;
+					delete temp.getAutocompleteMatches;
 					localStorage.setItem("viewmodel-state", JSON.stringify(temp));
 				}, 1000);
+
+
+			});
+		</script>
+
+		<script>
+		</script>
+
+		<script>
+			$(document).ready(function() {
 			});
 		</script>
 
 	</head>
 	<body>
-		<div class='inline'>
-			<div id='cont_title'>
-				<h4 style='margin-top:0'>Race Title</h4>
-				<input type="text" class="form-control" placeholder="Race Title" data-bind="value: race_headings.title, valueUpdate: 'afterkeydown'">
-				<div id='field_match'>
-					<h4>Match</h4>
-					<input type="text" class="form-control" placeholder="Heat #, Semi, Final" data-bind="value: race_headings.match, valueUpdate: 'afterkeydown'">
-				</div>
-				<div id='field_length'>
-					<h4>Length</h4>
-					<input type="text" class="form-control" placeholder="Meters" data-bind="value: race_headings.length, valueUpdate: 'afterkeydown'">
-				</div>
-			</div>
-
-			<div id='cont_swimmer' style='width:400px;'>
-				<div class='header swimmer_row'>
-					<h5 style='width:5%'>#</h5>
-					<div style='width:7.5%'></div>
-					<h5 style='width:15%'>School</h5>
-					<h5 style='width:53.5%'>Name</h5>
-					<h5 style='width:15%'>Time</h5>
-				</div>
-
-				<!-- DATA-BIND FOR LOOP -->
-				<div data-bind="foreach: swimmers">
-					<div class='swimmer_row'>
-						<h5 style='width:5%' data-bind='text:lane'></h5>
-						<div style='width:7.5%'>
-							<input type="radio" name="lane_number" data-bind='value:lane, checked:$root.selected_swimmer'>
-						</div>
-						<input style='width:15%' type="text" class="form-control" placeholder="School" data-bind="value: school, valueUpdate: 'afterkeydown'">
-						<input style='width:53.5%' type="text" class="form-control" placeholder="Name" data-bind="value: name, valueUpdate: 'afterkeydown'">
-						<input style='width:15%' type="text" class="form-control" placeholder="Time" data-bind="value: time, valueUpdate: 'afterkeydown'">
+		<div id="statusline" style='display:none'></div>		
+		<div class='inline' id='controls_left'>
+			<div class='inline'>
+				<div id='cont_title'>
+					<h4 style='margin-top:0'>Race Title</h4>
+					<input type="text" class="form-control" placeholder="Race Title" data-bind="value: race_headings.title, valueUpdate: 'afterkeydown', ko_autocomplete: { source: $root.getAutocompleteRaces(), delay: 0, autoFocus: true}, event: { blur: $root.fillLengthBasedOnRace }">
+					<div id='field_match'>
+						<h4>Match</h4>
+						<input type="text" class="form-control" placeholder="Heat #, Semi, Final" data-bind="value: race_headings.match, valueUpdate: 'afterkeydown', ko_autocomplete: { source: $root.getAutocompleteMatches(), delay: 0, autoFocus: true}">
+					</div>
+					<div id='field_length'>
+						<h4>Length</h4>
+						<input type="text" class="form-control" placeholder="Meters" data-bind="value: race_headings.length, valueUpdate: 'afterkeydown'">
 					</div>
 				</div>
-				<!-- DATA-BIND FOR LOOP -->
+
+				<div id='cont_swimmer' style='width:400px;'>
+					<div class='header swimmer_row'>
+						<h5 style='width:5%'>#</h5>
+						<div style='width:7.5%'></div>
+						<h5 style='width:15%'>School</h5>
+						<h5 style='width:53.5%'>Name</h5>
+						<h5 style='width:15%'>Time</h5>
+					</div>
+
+					<!-- DATA-BIND FOR LOOP -->
+					<div id='swimmers_list' data-bind="foreach: swimmers">
+						<div class='swimmer_row'>
+							<h5 style='width:5%' data-bind='text:lane'></h5>
+							<div style='width:7.5%'>
+								<input type="radio" name="lane_number" data-bind='value:lane, checked:$root.selected_swimmer'>
+							</div>
+							<input style='width:15%' type="text" class="form-control" placeholder="School" data-bind="value: school, valueUpdate: 'afterkeydown', attr: { tabindex: -1 }">
+							<input style='width:53.5%' type="text" class="form-control" placeholder="Name" data-bind="ko_autocomplete: { source: $root.getAutocompleteNames(), delay: 0, autoFocus: true}, value: name, valueUpdate: 'afterkeydown', event: { blur: $root.fillSchoolBasedOnName }, attr: { tabindex: lane }">
+							<input style='width:15%' type="text" class="form-control" placeholder="Time" data-bind="value: time, valueUpdate: 'afterkeydown'">
+						</div>
+					</div>
+					<!-- DATA-BIND FOR LOOP -->
+				</div>
+			</div>
+		
+			<div class='inline' id='right_pane' style='margin-left:20px;border-right: 1px solid #DDDDDD;'>
+				<div id="cont_gfx_preview">
+					<img src='img/results.png' data-bind="attr: {src: preview_image}">
+				</div>
+
+				<div id='cont_gfx_type' style='display:inline-block;'>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="1">Race Introduction</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="2">Start List</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="3">Nameplate</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="4">Lane Overlay</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="5">Winner</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="6">Results</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="7">Team Scores</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="8">CLEAR GRAPHICS</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="9">Splits and Running Time</label>
+					<a class='btn btn-danger' id='update' data-bind='click:on_air_submit'>On Air <span class='fn_key'>(F9)</span></a>
+				</div>
+			</div>
+
+
+			<div id='button_container' style='margin-top:10px;'>
+				<a class='btn btn-primary' data-bind='click: next_swimmer'>Next Swimmer <span class="fn_key">(F8)</span></a>
+				<a class='btn btn-success' data-bind="click: save_heat_to_localstorage">Save Current Heat</a>
+				<a class='btn btn-default' data-bind="click: clear_all_form_fields">Clear List</a>
+			</div>
+
+			<div class='inline' style='width:400px;margin-top:15px;'>
+				<select size='10' class="form-control inline" style='width:240px;' data-bind="value: selected_heatsheet, options: myItems, optionsText: 'value', optionsValue: 'path'">
+					<option value="Apple">3_Boys_100M_Freestyle_H0.csv</option>
+					<option value="Banana">Banana</option>
+					<option value="Orange">Orange</option>
+					<option value="Pear">Pear</option>
+					<option value="Peach">Peach</option>
+				</select>
+				<div style='width: 156px;' class='inline bottom'>
+					<a class='btn btn-danger btn-sm' style='margin-top:5px;' data-bind="click: deleteHeatList">Delete</a>
+					<a class='btn btn-default btn-sm' style='margin-top:5px;' data-bind="click: updateHeatList">Update List</a>
+					<a class='btn btn-default' style='margin-top:5px;' onclick="reset_count()">Import JSON / CSV</a>
+					<a class='btn btn-primary' style='margin-top:5px;' data-bind="click: import_heat_sheet">Import Selected <span class="fn_key">(F2)</span></a>
+				</div>
+			</div>
+
+			<div class='inline' style='width:220px;margin-top:15px;'>
+				<textarea class="form-control" rows="8" style='font-size: 12px;'></textarea>
+				<a class='btn btn-default' style='margin-top:5px;' onclick="reset_count()">Clear</a>
+				<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import <span class="fn_key">(F2)</span></a>
+
 			</div>
 		</div>
-	
-		<div class='inline' id='right_pane' style='margin-left:20px;border-right: 1px solid #DDDDDD;'>
-			<div id="cont_gfx_preview">
-				<img src='img/results.png' data-bind="attr: {src: preview_image}">
-			</div>
 
-			<div id='cont_gfx_type' style='display:inline-block;'>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="1">Race Introduction</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="2">Start List</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="3">Nameplate</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="4">Lane Overlay</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="5">Winner</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="6">Results</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="7">Team Scores</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="8">CLEAR GRAPHICS</label>
-				<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="9">Splits and Running Time</label>
-				<a class='btn btn-danger' id='update'>On Air <span class='fn_key'>(F9)</span></a>
-			</div>
-		</div>
+		<div class="inline" id="controls_right_serial" style=''>
+			<code>LOL</code>
+			<code>LOL</code>
+			<a class='btn btn-primary' style='margin-top:5px;' data-bind="click: getAutocompleteNames">Import Selected <span class="fn_key">(F2)</span></a>
 
-
-		<div id='button_container' style='margin-top:10px;'>
-			<a class='btn btn-primary' onclick='next_half_inning()'>Next Swimmer <span class="fn_key">(F8)</span></a>
-			<a class='btn btn-success' onclick="reset_count()">Placehold (R)</a>
-			<a class='btn btn-default' onclick='increment_outs()'>Placehold (O)</a>
-		</div>
-
-		<div class='inline' style='width:400px;margin-top:15px;'>
-			<select size='10' class="form-control inline" style='width:240px;'>
-				<option value="Apple">3_Boys_100M_Freestyle_H0.csv</option>
-				<option value="Banana">Banana</option>
-				<option value="Orange">Orange</option>
-				<option value="Pear">Pear</option>
-				<option value="Peach">Peach</option>
-			</select>
-			<div style='width: 156px;' class='inline bottom'>
-				<a class='btn btn-default' onclick="reset_count()">Import File</a>
-				<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import Selected <span class="fn_key">(F2)</span></a>
-			</div>
-		</div>
-
-		<div class='inline' style='width:220px;margin-top:15px;'>
-			<textarea class="form-control" rows="8" style='font-size: 12px;'></textarea>
-			<a class='btn btn-default' style='margin-top:5px;' onclick="reset_count()">Clear</a>
-			<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import <span class="fn_key">(F2)</span></a>
 
 		</div>
-
 
 
 

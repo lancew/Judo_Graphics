@@ -1,0 +1,120 @@
+
+main.elf:     file format elf32-avr
+
+Sections:
+Idx Name          Size      VMA       LMA       File off  Algn
+  0 .text         00000054  00000000  00000000  00000054  2**1
+                  CONTENTS, ALLOC, LOAD, READONLY, CODE
+  1 .debug_aranges 00000020  00000000  00000000  000000a8  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  2 .debug_pubnames 0000001b  00000000  00000000  000000c8  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  3 .debug_info   00000113  00000000  00000000  000000e3  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  4 .debug_abbrev 000000b2  00000000  00000000  000001f6  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  5 .debug_line   00000169  00000000  00000000  000002a8  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  6 .debug_frame  00000020  00000000  00000000  00000414  2**2
+                  CONTENTS, READONLY, DEBUGGING
+  7 .debug_str    000000da  00000000  00000000  00000434  2**0
+                  CONTENTS, READONLY, DEBUGGING
+  8 .debug_ranges 00000048  00000000  00000000  0000050e  2**0
+                  CONTENTS, READONLY, DEBUGGING
+
+Disassembly of section .text:
+
+00000000 <__vectors>:
+   0:	09 c0       	rjmp	.+18     	; 0x14 <__ctors_end>
+   2:	0e c0       	rjmp	.+28     	; 0x20 <__bad_interrupt>
+   4:	0d c0       	rjmp	.+26     	; 0x20 <__bad_interrupt>
+   6:	0c c0       	rjmp	.+24     	; 0x20 <__bad_interrupt>
+   8:	0b c0       	rjmp	.+22     	; 0x20 <__bad_interrupt>
+   a:	0a c0       	rjmp	.+20     	; 0x20 <__bad_interrupt>
+   c:	09 c0       	rjmp	.+18     	; 0x20 <__bad_interrupt>
+   e:	08 c0       	rjmp	.+16     	; 0x20 <__bad_interrupt>
+  10:	07 c0       	rjmp	.+14     	; 0x20 <__bad_interrupt>
+  12:	06 c0       	rjmp	.+12     	; 0x20 <__bad_interrupt>
+
+00000014 <__ctors_end>:
+  14:	11 24       	eor	r1, r1
+  16:	1f be       	out	0x3f, r1	; 63
+  18:	cf e9       	ldi	r28, 0x9F	; 159
+  1a:	cd bf       	out	0x3d, r28	; 61
+  1c:	02 d0       	rcall	.+4      	; 0x22 <main>
+  1e:	18 c0       	rjmp	.+48     	; 0x50 <_exit>
+
+00000020 <__bad_interrupt>:
+  20:	ef cf       	rjmp	.-34     	; 0x0 <__vectors>
+
+00000022 <main>:
+#define UNUSED_PB1 1,B
+#define UNUSED_PB0 0,B
+
+
+int main(void) {
+	out(REED_1000MS_PULSE);
+  22:	bb 9a       	sbi	0x17, 3	; 23
+	in(MIC_TTL_INPUT);
+  24:	bc 98       	cbi	0x17, 4	; 23
+
+	in(UNUSED_PB0);
+  26:	b8 98       	cbi	0x17, 0	; 23
+	in(UNUSED_PB1);
+  28:	b9 98       	cbi	0x17, 1	; 23
+	in(UNUSED_PB2);
+  2a:	ba 98       	cbi	0x17, 2	; 23
+	out(UNUSED_PB0);
+  2c:	b8 9a       	sbi	0x17, 0	; 23
+	out(UNUSED_PB1);
+  2e:	b9 9a       	sbi	0x17, 1	; 23
+	out(UNUSED_PB2);
+  30:	ba 9a       	sbi	0x17, 2	; 23
+    milliseconds can be achieved.
+ */
+void
+_delay_loop_2(uint16_t __count)
+{
+	__asm__ volatile (
+  32:	2f e0       	ldi	r18, 0x0F	; 15
+  34:	30 e0       	ldi	r19, 0x00	; 0
+
+	
+	for(;;) {
+		if(get(MIC_TTL_INPUT)) {
+  36:	b4 9b       	sbis	0x16, 4	; 22
+  38:	09 c0       	rjmp	.+18     	; 0x4c <__SREG__+0xd>
+			on(REED_1000MS_PULSE);
+  3a:	c3 9a       	sbi	0x18, 3	; 24
+  3c:	80 e1       	ldi	r24, 0x10	; 16
+  3e:	97 e2       	ldi	r25, 0x27	; 39
+  40:	f9 01       	movw	r30, r18
+  42:	31 97       	sbiw	r30, 0x01	; 1
+  44:	f1 f7       	brne	.-4      	; 0x42 <__SREG__+0x3>
+		__ticks = (uint16_t) (__ms * 10.0);
+		while(__ticks)
+		{
+			// wait 1/10 ms
+			_delay_loop_2(((F_CPU) / 4e3) / 10);
+			__ticks --;
+  46:	01 97       	sbiw	r24, 0x01	; 1
+		__ticks = 1;
+	else if (__tmp > 65535)
+	{
+		//	__ticks = requested delay in 1/10 ms
+		__ticks = (uint16_t) (__ms * 10.0);
+		while(__ticks)
+  48:	d9 f7       	brne	.-10     	; 0x40 <__SREG__+0x1>
+  4a:	f5 cf       	rjmp	.-22     	; 0x36 <__CCP__+0x2>
+			_delay_ms(1000);
+		}
+		else
+			off(REED_1000MS_PULSE);
+  4c:	c3 98       	cbi	0x18, 3	; 24
+  4e:	f3 cf       	rjmp	.-26     	; 0x36 <__CCP__+0x2>
+
+00000050 <_exit>:
+  50:	f8 94       	cli
+
+00000052 <__stop_program>:
+  52:	ff cf       	rjmp	.-2      	; 0x52 <__stop_program>
