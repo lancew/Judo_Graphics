@@ -1,0 +1,106 @@
+[
+  {
+    "race":"Boys 200M Freestyle",
+    "length":200
+  },
+  {
+    "race":"Girls 200M Freestyle",
+    "length":200
+  },
+  {
+    "race":"Boys 100M Breaststroke",
+    "length":100
+  },
+  {
+    "race":"Girls 100M Breaststroke",
+    "length":100
+  },
+  {
+    "race":"Boys 50M Butterfly",
+    "length":50
+  },
+  {
+    "race":"Girls 50M Butterfly",
+    "length":50
+  },
+  {
+    "race":"Boys 100M Backstroke",
+    "length":100
+  },
+  {
+    "race":"Girls 100M Backstroke",
+    "length":100
+  },
+  {
+    "race":"Boys 400M Individual Medley",
+    "length":400
+  },
+  {
+    "race":"Girls 400M Individual Medley",
+    "length":400
+  },
+  {
+    "race":"Boys 200M Individual Medley",
+    "length":200
+  },
+  {
+    "race":"Girls 200M Individual Medley",
+    "length":200
+  },
+  {
+    "race":"Boys 800M Freestyle",
+    "length":800
+  },
+  {
+    "race":"Girls 800M Freestyle",
+    "length":800
+  },
+  {
+    "race":"Boys 200M Breaststroke",
+    "length":200
+  },
+  {
+    "race":"Girls 200M Breaststroke",
+    "length":200
+  },
+  {
+    "race":"Boys 100M Freestyle",
+    "length":100
+  },
+  {
+    "race":"Girls 100M Freestyle",
+    "length":100
+  },
+  {
+    "race":"Boys 400M Freestyle",
+    "length":400
+  },
+  {
+    "race":"Girls 400M Freestyle",
+    "length":400
+  },
+  {
+    "race":"Boys 100M Butterfly",
+    "length":100
+  },
+  {
+    "race":"Girls 100M Butterfly",
+    "length":100
+  },
+  {
+    "race":"Boys 200M Backstroke",
+    "length":200
+  },
+  {
+    "race":"Girls 200M Backstroke",
+    "length":200
+  },
+  {
+    "race":"Boys 50M Freestyle",
+    "length":50
+  },
+  {
+    "race":"Girls 50M Freestyle",
+    "length":50
+  }
+]
