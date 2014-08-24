@@ -1,32 +1,781 @@
 <!doctype html>
-<html lang="en">
+<html style='overflow:hidden;background-color:rgb(0,255,33);'>
 	<head>
 		<meta charset="UTF-8">
 		<title>IASAS Swimming 2014 Graphics Displayer</title>
-		<script type="text/javascript" src="http://ajax.googleapis.com/ajax/libs/jquery/1.6.2/jquery.min.js"></script>		
+		<link rel="shortcut icon" href="./img/favicon.png"/>
+
+		<link rel="stylesheet/less" type="text/css" href="style-displayer.less">
+		<link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+
+		<script type="text/javascript">var less=less||{};less.env='development';</script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
+		<script src="//code.jquery.com/jquery-latest.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>		
+		<script src="http://blogs.tas.edu.tw/softball/js/worldclock.js"></script>		
+		<script src="http://jquery-textfill.github.io/jquery-textfill/jquery.textfill.min.js"></script>
+
 		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>
 
 		<script>
-  $(document).ready(function() {				
-			//var peer = new Peer('15107514', {key: '281sa29bxa8aor', debug: 3}); 
-			var peer = new Peer('15107514', {key: 'peerjs', debug: 3, host:'107.170.0.13', port:9000}); 
-			
-			peer.on('connection', function(conn) {
-				conn.on('data', function(data){
-					// Will print 'hi!'
-					console.log(data);
-					$("h1").html(data);
+			$(document).ready(function() {				
+				var peer = new Peer('15107514', {key: '281sa29bxa8aor', debug: 3}); 
+				//var peer = new Peer('15107514', {key: 'peerjs', debug: 0, host:'107.170.0.13', port:9000}); 
+				
+				peer.on('connection', function(conn) {
+					conn.on('data', function(data){
+						if(data.substring(0,1) != '{') {
+							dynamic_handler(data);
+						} else {
+							ko.mapping.fromJS(JSON.parse(data), viewModel);
+						}
 
 
+						$('.textfill').textfill({ maxFontPixels: 50 });
+
+
+						//console.log(data);						
+						//console.log(ko.toJS(viewModel));
+					});
 				});
+
+
+				/* LocalStorage initialize */
+				if(localStorage.getItem("viewmodel-state") == null) {
+					localStorage.setItem("viewmodel-state", '{"race_headings":{"title":"IASAS Swimming 2014","match":"International School of Manila","length":200},"myItems":[{"path":"0_Boys 200M Freestyle_Preliminaries","value":"0_Boys 200M Freestyle_Preliminaries"}],"gfx_type":"4","selected_swimmer":"2","swimmers":[{"lane":1,"school":"ISB","name":"Thanya Chatchalermwit","time":""},{"lane":2,"school":"ISM","name":"Daiki Kuriyama","time":""},{"lane":3,"school":"SAS","name":"Kei Hyogo","time":""},{"lane":4,"school":"ISKL","name":"Siena Bertoluzzi","time":""},{"lane":5,"school":"TAS","name":"Phillip Teng","time":""},{"lane":6,"school":"ISB","name":"Martin Brekke","time":""},{"lane":7,"school":"SAS","name":"Kaitlyn Ritchey","time":""},{"lane":8,"school":"","name":"","time":""}],"team_scores":[{"school":"TAS","girls":0,"boys":"1000"},{"school":"SAS","girls":0,"boys":"999"},{"school":"ISB","girls":0,"boys":"9"},{"school":"ISM","girls":0,"boys":"998"},{"school":"JIS","girls":0,"boys":"234"},{"school":"ISKL","girls":0,"boys":"555"}]}');
+				}
+				/*********** SPLITS & DYNAMICS ************/
+				function convert_time(time) {
+					if(time.indexOf(':') == -1) {
+						return parseFloat(time);
+					}
+					return Number((parseFloat(time.split(':')[0])*60 + parseFloat(time.split(':')[1])).toFixed(2));
+				}
+				
+								
+
+				
+				var pauseRunningTime = new Boolean(); // boolean; true if running time is paused
+				var race_over = new Boolean(); // boolean; true if race has been won
+				var first_place_split_time = 0; // store the split time for the first place swimmer
+				var total_laps_of_race = 0; // total laps of the 25M pool
+
+				function dynamic_handler(data) {
+					//console.log(data);
+					data_type = data.substring(0,1); // data type; t for time, s for splits
+
+					if(data_type == 't') {
+						time = data.substring(1); // remove first character (datatype); ie t32.1 is 32.1 sec
+						if(time == '0.00') time = '0.0';
+						viewModel.dynamic.time(time);
+					}
+
+					if(data_type == 'r') { //reset
+						//race_over = 0;
+						//$('#split_container').hide(); 
+						//$('#split_container li').hide(); 
+						//$('#split_img_first').hide(); $('#split_img_second').hide(); $('#split_img_third').hide(); 
+						console.log("Reset");
+						//viewModel.splits = ko.observableArray([
+						//	{ place: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko//.observable("") },
+						//	{ place: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko//.observable("") },
+						//	{ place: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko//.observable("") }
+						//]);
+						
+					}
+
+
+					if(data_type == 's') {
+						data = data.substring(1); // remove leading datatype
+						data = data.replace(/[A-Za-z]/g, ""); // remove name and school
+						data = data.split(" "); // remove empty elements ("")
+						
+						// data - [lane, place, time, laps]
+						
+						_lane = data[0];
+						_place = parseInt(data[1]);
+						_time = data[2];
+						_laps = data[3];
+
+						total_laps_of_race = viewModel.returnTotalLaps();
+
+						viewModel.splits()[parseInt(data[1])-1].time(data[2]); // Import split data into ViewModel
+						viewModel.splits()[parseInt(data[1])-1].laps(data[3]);
+						viewModel.splits()[parseInt(data[1])-1].lane(data[0]);
+
+						if(data[3] == total_laps_of_race) {
+							console.log("FINISHED: " + data[0] +" " + data[2]);
+						} else { 
+							console.log("LANE: "+ data[0] + "  PLACE: " + data[1] + "  TIME: " + data[2] + "  LAP#: " + data[3]);
+						}
+						
+						swimmer = viewModel.returnSwimmerGivenLane(_lane-1); // Fill in name and school based on lane #
+						temp = swimmer.name.split(" ");
+						swimmer.name = temp[temp.length-1].toUpperCase();
+
+						viewModel.splits()[_place-1].name(swimmer.name);
+						viewModel.splits()[_place-1].school(swimmer.school);
+
+						console.log(ko.toJS(viewModel.splits()[_place-1]));
+
+						switch(data[1]) { // switch place for splits
+							case '1':
+								//$('#split_img_first').show();
+								viewModel.dynamic.split_level(1);
+								//change_swimmer_name(1, data[0]); // place, lane
+
+
+								//$('#first_split .time').html(data[2]); // split time
+								first_place_split_time = convert_time(data[2]); // first place time in seconds
+
+								//$('#first_split').show();
+								//$('#split_container').show();
+								viewModel.dynamic.show_splits("true");
+								//pause_running_time(3000, data[2]); // pause timer for first split
+								viewModel.dynamic.current_length(_laps*25);
+								viewModel.dynamic.show_length(1);
+								setTimeout(function() {
+									viewModel.dynamic.show_length(0);
+								}, 15000);
+								//show_length(parseInt(data[3])*25, 10000);
+								break;
+							
+							case '2': // 2nd place
+								//$('#split_img_second').show();
+								viewModel.dynamic.split_level(2);
+								//change_swimmer_name(2, data[0]); // place, lane
+								//display_time = Number((convert_time(data[2]) - first_place_split_time).toFixed(2));
+								display_time = (convert_time(data[2]) - first_place_split_time).toFixed(2);
+								//$('#second_split .time').html("+" + display_time);
+								viewModel.splits()[1].time("+" + display_time);
+								//$('#second_split').show();
+								break;
+							case '3': // third place
+								//$('#split_img_third').show();
+								viewModel.dynamic.split_level(3);
+								//change_swimmer_name(3, data[0]); // place, lane
+								display_time = (convert_time(data[2]) - first_place_split_time).toFixed(2);
+								//$('#third_split .time').html("+" + display_time);
+								viewModel.splits()[2].time("+" + display_time);
+								//$('#third_split').show();
+								//$('#split_img').show();
+								setTimeout(function() {
+									//$('#split_container').hide();
+									viewModel.dynamic.show_splits("false");
+									//$('#split_container li').hide(); 
+									viewModel.dynamic.split_level(0);
+									//$('#split_img_first').hide(); $('#split_img_second').hide(); $('#split_img_third').hide(); 
+									//console.log("Hide all splits");
+								}, 8000);
+								
+								break;
+						}
+					}
+				}
+
+
+
+				var vm = {
+					race_headings: {
+						title: ko.observable(""),
+						match: ko.observable(""),
+						length: ko.observable("")
+					},
+
+					selected_heatsheet: ko.observable(""),
+					myItems: ko.observableArray([
+						{ path: 'Item 1', value: "1" },
+						{ path: 'Item 3', value: "3" },
+						{ path: 'Item 4', value: "4" }
+					]),
+
+
+					gfx_type: ko.observable("8"),
+					selected_swimmer: ko.observable("1"),
+
+					swimmers: ko.observableArray([
+						{ lane: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "4", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "5", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "6", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "7", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") },
+						{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
+					]),
+
+					team_scores: ko.observableArray([
+						{ school: "TAS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "SAS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISB", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISM", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "JIS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISKL", girls: ko.observable(0), boys: ko.observable(0) },
+					]),
+
+					dynamic: {
+						time: ko.observable("0.0"),
+						show_length: ko.observable(0),
+						current_length: ko.observable(""),
+						split_level: ko.observable(0),
+						show_splits: ko.observable("")
+					},
+
+					splits: ko.observableArray([
+						{ place: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") },
+						{ place: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") },
+						{ place: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") }
+					])
+
+				}
+
+				var viewModel = ko.mapping.fromJS(vm);
+
+				/* Results */
+				viewModel.sortedResults = ko.computed(function() {
+					obj_arr = [];
+					ko.utils.arrayForEach(this.swimmers(), function(item) {
+						if(item.name() == "") return; // Skip empty lanes
+						unsorted_time = item.time();
+
+						if(unsorted_time.indexOf(":") == -1 && unsorted_time.indexOf(".") > 0) {
+							arr = unsorted_time.split('.');
+							sum = arr[0]*1000 + arr[1]*10;
+						} else if(unsorted_time.indexOf(":") > 0 && unsorted_time.indexOf(".") > 0) {
+							unsorted_time = unsorted_time.replace(':', '.');
+							arr = unsorted_time.split('.');
+							sum = arr[0] * 60000 + arr[1]*1000 + arr[2]*10;
+						} else sum = 9999999; 
+
+						item['milliseconds'] = sum;
+						obj = {lane:item.lane(), school:item.school(), name:item.name(), time:item.time(), milliseconds:item.milliseconds};
+						obj_arr.push(obj);
+					});
+					function compare(a,b) {
+						a = parseInt(a.milliseconds);
+						b = parseInt(b.milliseconds);
+						if (a < b) return -1;
+						if (a > b) return 1;
+						return 0;
+					}
+
+					obj_arr = obj_arr.sort(compare);
+					return obj_arr;
+				}, viewModel);
+
+				/* Results Shift */
+				viewModel.resultsSizing = ko.computed(function() {
+					num_swimmers = this.sortedResults().length;
+					gfx_height = (358 + parseInt(num_swimmers)*34).toString() + "px";
+					gfx_shift = "translateY(" + ((8 - parseInt(num_swimmers))*17).toString() + "px)";
+					return {gfx_height: gfx_height, gfx_shift: gfx_shift};
+				}, viewModel);
+
+				/* Start List */
+				viewModel.startList = ko.computed(function() {
+					obj_arr = [];
+					ko.utils.arrayForEach(this.swimmers(), function(item) {
+						obj = {lane:item.lane(), school:item.school(), name:item.name(), time:""};
+						obj_arr.push(obj); // Only add to start list if name is present
+					});
+					return obj_arr;
+				}, viewModel);
+
+				/* Team Scores */
+				viewModel.teamScores = ko.computed(function() {
+					boys_arr = [];
+					girls_arr = [];
+					ko.utils.arrayForEach(this.team_scores(), function(item) {
+						switch(item.school().toLowerCase()) {
+							case 'tas':
+								mascot = 'Tigers'; break;
+							case 'sas':
+								mascot = 'Eagles'; break;
+							case 'isb':
+								mascot = 'Panthers'; break;
+							case 'ism':
+								mascot = 'Bearcats'; break;
+							case 'iskl':
+								mascot = 'Panthers'; break;
+							case 'jis':
+								mascot = 'Dragons'; break;
+						}
+						boy = {school:item.school(), score: item.boys(), mascot:mascot};
+						girl = {school:item.school(), score: item.girls(), mascot:mascot};
+						boys_arr.push(boy);
+						girls_arr.push(girl);
+					});
+
+					function compare(a,b) {
+						a = parseInt(a.score);
+						b = parseInt(b.score);
+						if (a > b) return -1;
+						if (a < b) return 1;
+						return 0;
+					}
+
+					boys_arr = boys_arr.sort(compare);
+					girls_arr = girls_arr.sort(compare);
+					return {boys: boys_arr, girls: girls_arr};
+				}, viewModel);
+
+				/* Nameplate - JS Object - {lane:0, school:"", name:""}*/
+				viewModel.nameplate = ko.computed(function() {
+					lane = this.selected_swimmer();
+					school = this.swimmers()[lane-1].school();
+					name = this.swimmers()[lane-1].name();
+
+					return {lane:lane, school:school, name:name};
+				}, viewModel);
+
+				/* Winner - JS Object {"race_headings":race_data, "swimmer":swimmer_data} */
+				viewModel.winner = ko.computed(function() {
+					swimmer_data = this.sortedResults()[0]; // First place from results list
+					race_data = ko.toJS(this.race_headings);
+
+					//console.log({"race_headings":race_data, "swimmer":swimmer_data});
+
+					return {"race_headings":race_data, "swimmer":swimmer_data};
+				}, viewModel);
+
+				/* Race Introduction - JS Object {"title":"", "subtitle":""} */
+				viewModel.race_introduction = ko.computed(function() {
+					console.log(this.race_headings.title());
+					return {"title":this.race_headings.title(), "subtitle":this.race_headings.match()};
+				}, viewModel);
+
+				viewModel.laneOverlay = ko.computed(function() {
+					obj_arr = [];
+					ko.utils.arrayForEach(this.swimmers(), function(item) {
+						obj = {lane:item.lane(), school:item.school(), name:item.name(), time:""};
+						obj_arr.push(obj);
+					});
+					swimmer_data = obj_arr;
+					for(x in swimmer_data) {
+						arr = swimmer_data[x].name.split(" ");
+						swimmer_data[x].name = arr[arr.length-1].toUpperCase();
+					}
+					return swimmer_data;
+				}, viewModel);
+
+				viewModel.returnTotalLaps = ko.computed(function() {
+					return this.race_headings.length() / 25;
+				}, viewModel);
+
+				viewModel.returnSwimmerGivenLane = function(lane) {
+					return {school: viewModel.swimmers()[lane].school(), name: viewModel.swimmers()[lane].name()};
+				};
+
+				viewModel.debug = function() {
+					lane = 4;
+					console.log(this.nig('l'));
+					console.log(viewModel.swimmers()[lane].name(), viewModel.swimmers()[lane].school());
+				}
+
+
+				if(localStorage.getItem("viewmodel-state") !== null) {
+					console.log(JSON.parse(localStorage.getItem("viewmodel-state")));
+					ko.mapping.fromJS(JSON.parse(localStorage.getItem("viewmodel-state")), viewModel);
+				}
+
+				ko.applyBindings(viewModel);
+				$('.textfill').textfill({ maxFontPixels: 50 });
+
 			});
-	});
 		</script>
+		
+		<!-- LANE OVERLAY STYLES -->
+		<style type="text/css">
+			.overlay_lane_number {
+				float:left;
+				font-family:Arial;
+				color:#EEEEEE;
+				font-size:65px;
+				font-weight:bold;
+				padding-left:10px;
+			}	
+		   .overlay_row {
+				background-color:#0074C2;
+				border:3px solid #004C80;
+				-webkit-border-radius: 10px;
+				width:380px;
+				height:95px;
+				line-height:95px;
+				-webkit-box-shadow: inset 67px 0 60px -11px #039AFF;
+				position:absolute;
+		   }
+		   .overlay_swimmer { /* Swimmer name and school graphic */
+font-family: Arial;
+float: left;
+padding-right: 10px;
+color: white;
+font-weight: bold;
+font-size: 40px;
+		   }
+		   .textfill {
+		   		width:240px;
+		   }
+		   
+		   .overlay_swimmer img {
+				vertical-align: middle;
+				padding-left:10px;
+		   }
+		   
+		   .overlay_swimmer_name {
+				float:left;
+				width: 231px;
+				text-align:right;
+				overflow-x:hidden;
+		   }
+		</style>
 	</head>
 
-	<body>
-		<h1 id='time'></h1>
+	<body style='background-color:rgb(0,255,33);'>
+<span id="Taipei" style="display:none;
+    font-size:110px;
+    font-weight: bold;
+    -webkit-text-stroke: 2px;
+    -webkit-text-stroke-color: black;
+    position: absolute;
+    top: 0;
+    color:white;
+    margin-left: 800px;
+"> 00:00</span>
+		<!-- <button data-bind="click:debug" style="position: absolute;z-index:100">Debug</button> -->
 
+		<!-- <h1 id='time'></h1> -->
+		<!-- CONTAINER -->
+		<span id='container' style='display:block;position:absolute;top:0;width:1024px;height:768px;'>
+
+			<div id='results' class='zoomin' data-bind='visible: gfx_type() == 6, style: { height: resultsSizing().gfx_height, "-webkit-transform": resultsSizing().gfx_shift }'>
+				<h1 data-bind='text:race_headings.title()'></h1>
+				<h2 data-bind='text:race_headings.match() + " - Results"'></h2>
+
+				<ul class='results_list' data-bind='foreach: sortedResults'>
+					<li data-bind='css: school.toLowerCase()'>
+						<h3 data-bind='text:school.toUpperCase()'>TAS</h3>
+						<h4 data-bind='text:name.toUpperCase()'>NAME</h4>
+						<h5 data-bind='text:time'>0.0</h5>
+					</li>
+				</ul>
+			</div>
+
+			<div id='start_list' class='zoomin' data-bind='visible: gfx_type() == 2'>
+				<h1 data-bind='text:race_headings.title()'></h1>
+				<h2 data-bind='text:race_headings.match() + " - Start List"'></h2>
+
+				<ul class='results_list' data-bind='foreach: startList'>
+					<li data-bind='css: school.toLowerCase()'>
+						<h3 data-bind='text:school.toUpperCase()'>TAS</h3>
+						<h4 data-bind='text:name.toUpperCase()'>NAME</h4>
+					</li>
+				</ul>
+			</div>
+
+			<div id='team_scores' class='zoomin' data-bind='visible: gfx_type() == 7, with: teamScores'>
+				<h1 style=''>IASAS Swimming 2014 Standings</h1>
+				<ul class='results_list' id='boys' data-bind='foreach: boys'>
+					<li data-bind='css: school.toLowerCase()'>
+						<h3 data-bind='text:school'>TAS</h3>
+						<span data-bind='text:mascot'>Tigers</span>
+						<h5 data-bind='text:score'>0</h5>
+					</li>
+				</ul>
+				
+				<ul class='results_list' id='girls' style='margin-left:560px;' data-bind='foreach: girls'>
+					<li data-bind='css: school.toLowerCase()'>
+						<h3 data-bind='text:school'>TAS</h3>
+						<span data-bind='text:mascot'>Tigers</span>
+						<h5 data-bind='text:score'>0</h5>
+					</li>
+				</ul>			
+			</div>
+
+<div id="welcome" data-bind="visible:gfx_type() == 99">
+				<img src="static/iasas_logo.png" style="
+    margin-left: 250px;
+    margin-top: 50px;
+">
+				<h1 style="
+    font-weight: bolder;
+    font-size: 95px;
+    -webkit-transform: rotateY(49deg);
+    text-shadow: 2px 0 0 #fff, -2px 0 0 #fff, 0 2px 0 #fff, 0 -2px 0 #fff, 1px 1px #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff;
+    color: rgb(5, 50, 92);
+    margin-left: -65px;
+">IASAS SWIMMING 2014</h1>
+			</div>
+
+			<div id='nameplate' class='zoomin' data-bind='with:nameplate, visible: gfx_type() == 3' style='zoom: 1.40;
+margin-left: -147px;margin-top: -137px;'>
+				<h3 data-bind='text:lane'>1</h3>
+				<img src='static/tas.png' width='25' height='25' data-bind='attr:{src: "static/" + school.toLowerCase() + ".png"}'>
+				<h2 data-bind='text:school'>TAS</h2>
+				<h1 data-bind='text:name.toUpperCase()'>NAME</h1>
+			</div>
+			
+			<div id='winner' class='zoomin' data-bind='with:winner, visible: gfx_type() == 5'>
+				<h1 data-bind='text:race_headings.title'>Boys 100m Freestyle</h1>
+				<h2 data-bind='text:race_headings.match + " - Winner"'>Start List</h2>
+				<h6 data-bind='text:swimmer.lane'>1</h6>
+				<ul class='results_list winner_override'>
+					<li data-bind='css: swimmer.school.toLowerCase()'>
+						<h3 data-bind='text:swimmer.school'>TAS</h3>
+						<h4 data-bind='text:swimmer.name.toUpperCase()'>SWIMMER</h4>
+						<h5 data-bind='text:swimmer.time'>10.0</h5>
+					</li>
+				</ul>
+			</div>
+
+			<div id='race_intro' class='zoomin' data-bind='with:race_introduction, visible: gfx_type() == 1'>
+				<h1 data-bind='text:title'>Boys 100m Freestyle</h1>
+				<h2 data-bind='text:subtitle'>Preliminaries</h2>
+			</div>
+
+
+			<!--<div id="lane_overlay" data-bind='visible: gfx_type() == 4' style="-webkit-perspective: 186px; -webkit-perspective-origin-x: 53%; /* -webkit-perspective-origin-y: 50%; */ /* margin-left: 335px; */ margin-top: -79px; /* -webkit-transform: rotate(-2.2deg); *//* zoom:0.83; */">
+				<div id="overlay_image" style="-webkit-transform: rotateX(25deg);height:795px;width: 10000px;margin-left: -198px;" >
+
+					<div class="overlay_row" style="margin-top: 91px;width: 176px;" data-bind='visible: laneOverlay()[0].name != ""'>
+						<h6>1</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[0].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[0].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 192px;width: 176px;" data-bind='visible: laneOverlay()[1].name != ""'>
+						<h6>2</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[1].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[1].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 386px;width: 176px;" data-bind='visible: laneOverlay()[2].name != ""'>
+						<h6>3</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[2].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[2].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 584px;width: 176px;" data-bind='visible: laneOverlay()[3].name != ""'>
+						<h6>4</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[3].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[3].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 778px;width: 176px;" data-bind='visible: laneOverlay()[4].name != ""'>
+						<h6>5</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[4].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[4].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 972px;width: 176px;" data-bind='visible: laneOverlay()[5].name != ""'>
+						<h6>6</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[5].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[5].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 1164px;width: 176px;" data-bind='visible: laneOverlay()[6].name != ""'>
+						<h6>7</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[6].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[6].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+					<div class="overlay_row" style="margin-top: 91px;margin-left: 1347px;width: 176px;" data-bind='visible: laneOverlay()[7].name != ""'>
+						<h6>8</h6>
+						<span>
+							<img data-bind='attr:{src: "static/" + laneOverlay()[7].school.toLowerCase() + "_100px.png"}'>
+							<div class="textfill">
+								<span data-bind='text:laneOverlay()[7].name'>TENG</span>
+							</div>
+						</span>
+					</div>
+				</div>
+			</div>-->
+	
+
+
+		<div id="lane_overlay" data-bind='visible: gfx_type() == 4' style="-webkit-perspective: 477px;-webkit-perspective-origin-x: 12%;-webkit-perspective-origin-y: 67%;margin-left: 623px;margin-top: -134px;-webkit-transform: rotate(-1deg);zoom: 0.7;transition: opacity 0.4s linear;">
+			<div id="overlay_image" style="-webkit-transform: rotateX(32deg);height:795px;">
+				<div class="overlay_row" id='one' style="margin-top: 20px;" data-bind='visible:laneOverlay()[7].name != ""'>
+					<span class='overlay_lane_number'>8</span>
+					<span class="overlay_swimmer">
+							<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[7].name'>AGNEL</p>
+						<img data-bind='attr:{src: "static/" + laneOverlay()[7].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style='margin-top:130px;' data-bind='visible:laneOverlay()[6].name != ""'>
+					<span class='overlay_lane_number'>7</span>
+					<span class="overlay_swimmer">
+							<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[6].name'>CIELO</p>
+						<img data-bind='attr:{src: "static/" + laneOverlay()[6].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style='margin-top:235px;' data-bind='visible:laneOverlay()[5].name != ""'>
+					<span class='overlay_lane_number'>6</span>
+					<span class="overlay_swimmer">
+							<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[5].name'>GARCIA</p>
+						<img data-bind='attr:{src: "static/" + laneOverlay()[5].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style='margin-top:340px;'  data-bind='visible:laneOverlay()[4].name != ""'>
+					<span class='overlay_lane_number'>5</span>
+					<span class="overlay_swimmer">
+						<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[4].name'>VERSCHUREN</p>						
+						<img data-bind='attr:{src: "static/" + laneOverlay()[4].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style="margin-top: 450px;" data-bind='visible:laneOverlay()[3].name != ""'>
+					<span class='overlay_lane_number'>4</span>
+					<span class="overlay_swimmer">
+								<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[3].name'>ADRIAN</p>
+						<img data-bind='attr:{src: "static/" + laneOverlay()[3].school.toLowerCase() + "_100px.png"}' width='70' style='vertical-align: middle;padding-left:10px;'>
+					</span>
+				</div>
+				<div class="overlay_row" style="margin-top: 577px;" data-bind='visible:laneOverlay()[2].name != ""'>
+					<span class='overlay_lane_number'>3</span>
+					<span class="overlay_swimmer">
+							<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[2].name'>MAGNUSSEN</p>
+						<img data-bind='attr:{src: "static/" + laneOverlay()[2].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style="margin-top: 685px;" data-bind='visible:laneOverlay()[1].name != ""'>
+					<span class='overlay_lane_number'>2</span>
+					<span class="overlay_swimmer">
+							<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[1].name'>HAYDEN</p>
+
+						<img data-bind='attr:{src: "static/" + laneOverlay()[1].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+				<div class="overlay_row" style="margin-top: 800px;" data-bind='visible:laneOverlay()[0].name != ""'>
+					<span class='overlay_lane_number'>1</span>
+					<span class="overlay_swimmer">
+						<p class='overlay_swimmer_name' data-bind='text:laneOverlay()[0].name'>HAYDEN</p>
+
+						<img data-bind='attr:{src: "static/" + laneOverlay()[0].school.toLowerCase() + "_100px.png"}' width='70'>
+					</span>
+				</div>
+			</div>
+			
+		</div>
+		
+
+
+			
+			<div id='dynamic' class='zoomin' data-bind='visible: gfx_type() == 9'>
+				<img id='running_time_img' src='./img/144dpi_running_time.png' width='1024' class='graphics'>
+				<img id='running_time_img_and_length' src='./img/144dpi_running_time_and_length.png' width='1024' class='graphics' data-bind=' visible: dynamic.show_length()'>
+				<img id='split_img_first' src='./img/144dpi_first_place_split.png' width='1024' class='graphics' data-bind="visible: dynamic.split_level() == 1">
+				<img id='split_img_second' src='./img/144dpi_second_place_split.png' width='1024' class='graphics'  data-bind="visible: dynamic.split_level() == 2">
+				<img id='split_img_third' src='./img/144dpi_third_place_split.png' width='1024' class='graphics'  data-bind="visible: dynamic.split_level() == 3">
+				
+				
+				<p id='meters' data-bind='text:dynamic.current_length()+"M", visible: dynamic.show_length()'></p>
+				<p id='time' data-bind='text:dynamic.time()'>0.0</p>
+		
+				<ul id='split_container' data-bind="visible: dynamic.show_splits() == 'true'">
+					<li id='first_split' class='split_row' data-bind="visible: dynamic.split_level() >= 1">
+						<h2 class ='lane' data-bind='text: splits()[0].lane()'>0</h2>
+						<h3 class='school_and_name'>
+							<span class='school'>
+								<img src='./img/tas.png' data-bind='attr:{src: "./img/" + splits()[0].school().toLowerCase() + ".png"}'>
+								<span id='school' data-bind='text: splits()[0].school()'>TAS</span>
+							</span>
+							<span class='name' data-bind='text: splits()[0].name()'></span>
+						</h3>
+						<h4 class='time' data-bind='text: splits()[0].time()'></h4>
+					</li>
+					
+					<li id='second_split' class='split_row' data-bind="visible: dynamic.split_level() >= 2">
+						<h2 class ='lane' data-bind='text: splits()[1].lane()'>0</h2>
+						<h3 class='school_and_name'>
+							<span class='school'>
+								<img src='./img/tas.png' data-bind='attr:{src: "./img/" + splits()[1].school().toLowerCase() + ".png"}'>
+								<span id='school' data-bind='text: splits()[1].school()'>TAS</span>
+							</span>
+							<span class='name' data-bind='text: splits()[1].name()'></span>
+						</h3>
+						<h4 class='time' data-bind='text: splits()[1].time()'></h4>
+					</li>
+					
+					<li id='third_split' class='split_row' data-bind="visible: dynamic.split_level() >= 3">
+						<h2 class ='lane' data-bind='text: splits()[2].lane()'>0</h2>
+						<h3 class='school_and_name'>
+							<span class='school'>
+								<img src='./img/tas.png' data-bind='attr:{src: "./img/" + splits()[2].school().toLowerCase() + ".png"}'>
+								<span id='school' data-bind='text: splits()[2].school()'>TAS</span>
+							</span>
+							<span class='name' data-bind='text: splits()[2].name()'></span>
+						</h3>
+						<h4 class='time' data-bind='text: splits()[2].time()'></h4>
+					</li>
+				</ul>
+			</div>
+
+		</span>
+		<!-- CONTAINER -->
+
+
+		<!-- 
+		<div id='swimmers_list' data-bind="foreach: sortedResults">
+			<span data-bind='text:school'></span>
+			<span data-bind='text:name'></span>
+			<span data-bind='text:time'></span>
+			<br>
+		</div>
+		<br>
+		<br>
+		<div id='startlist' data-bind="foreach: startList">
+			<span data-bind='text:school'></span>
+			<span data-bind='text:name'></span>
+			<br>
+		</div>
+		<br>
+		<br>
+		<div id='nameplate' data-bind="with: nameplate">
+			<span data-bind='text:lane'></span>
+			<span data-bind='text:school'></span>
+			<span data-bind='text:name'></span>
+			<br>
+		</div>
+		<br>
+		<br>
+		<div id='winner' data-bind="with: winner">
+			<span data-bind='text:race_headings.title'></span>
+			<span data-bind='text:race_headings.match'></span>
+			<span data-bind='text:swimmer.lane'></span>
+			<span data-bind='text:swimmer.school'></span>
+			<span data-bind='text:swimmer.name'  ></span>
+			<span data-bind='text:swimmer.time'  ></span>
+			<br>
+		</div>
+		<br>
+		<br>
+		<div id='race_intro' data-bind="with: race_introduction">
+			<span data-bind='text:title'></span>
+			<span data-bind='text:subtitle'></span>
+			<br>
+		</div>
+	-->
 
 	</body>
 </html>

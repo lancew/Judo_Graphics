@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 	<head>
-		<meta charset="utf-8">
+		<meta charset="UTF-8">
 		<title>IASAS Swimming 2014 Controller</title>
 		<link rel="shortcut icon" href="./img/favicon.png"/>
 
@@ -12,22 +12,29 @@
 
 		<script type="text/javascript">var less=less||{};less.env='development';</script>
 		<script src="//code.jquery.com/jquery-latest.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>
 		<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
-		<script src="http://cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.9.3/typeahead.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.9.3/typeahead.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/mousetrap/1.4.6/mousetrap.min.js"></script>
+		<script src="https://rawgithub.com/ccampbell/mousetrap/master/plugins/global-bind/mousetrap-global-bind.min.js"></script>
 
 		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
 
 		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>		
 		<script src="./static/autobahn.min.js"></script>
 
-		<!-- WebRTC -->
 		<script> 
 			$(document).ready(function() {		
 				/******* WebRTC to Displayer ********/
-				var peer = new Peer({key: 'peerjs', debug: 0, host:'107.170.0.13', port:9000}); 
+				var peer = new Peer({key: '281sa29bxa8aor', debug: 3}); 
+				//var peer = new Peer({key: '281sa29bxa8aor', debug: 0}); 
+				//var peer = new Peer({key: 'peerjs', debug: 0, host:'107.170.0.13', port:9000}); 
+				setInterval(function() {
+					console.log(peer.disconnected);
+				}, 2000);
 
 				var conn = peer.connect('15107514');
 				
@@ -36,8 +43,15 @@
 				});	
 
 				conn.on('open', function(){
-					conn.send('hi!');
-					console.log("SENT");
+					//conn.send('hi!');
+					$("#rtc_status").removeClass("label-danger").addClass("label-success").html("CONNECTED TO DISPLAY");
+					console.log("PeerJS Connection Opened");
+				});
+	
+				conn.on('close', function(){
+					//conn.send('hi!');
+					$("#rtc_status").removeClass("label-success").addClass("label-danger").html("NO CONNECTION");
+					console.log("PeerJS Connection Opened");
 				});
 	
 
@@ -69,18 +83,33 @@
 				};
 
 				function receiveSerialData(topicUri, data) {
-					console.log(data);
+					//console.log(data);
 					conn.send(data);
 
-					var $code = $("<code>", {id: "foo", class: "a", text: data});
-					$("#controls_right_serial").append($code);
-					document.getElementById('controls_right_serial').scrollTop = 10000;
+					if(data.substring(0,1) == 's') {
+						data = data.substring(1); // remove leading datatype
+						data = data.replace(/[A-Za-z]/g, ""); // remove name and school
+						data = data.split(" "); // remove empty elements ("")
+						if(parseInt(data[3]) == parseInt(viewModel.returnTotalLaps())) // Update swimmer time if finished
+							viewModel.swimmers()[parseInt(data[0])-1].time(data[2]);
+						var $code = $("<code>", {id: "foo", class: "a", text: data});
+						$("#controls_right_serial").append($code);
+					}
+
+					//var $code = $("<code>", {id: "foo", class: "a", text: data});
+					document.getElementById('controls_right_serial').scrollTop = 100000;
 
 
 				}
 
 
 				/******* MISCELLANEOUS - JQUERY SETUPS, LOCALSTORAGE CHECKS, ETC ********/
+				Array.prototype.remove = function(from, to) {
+				  var rest = this.slice((to || from) + 1 || this.length);
+				  this.length = from < 0 ? this.length + from : from;
+				  return this.push.apply(this, rest);
+				};				
+
 				$.ajaxSetup({ cache: false, async: false});
 
 				if(localStorage.getItem("localStorage_heats_counter") == null) { // Counter to numerically order heat lists
@@ -103,6 +132,33 @@
 
 
 
+				Mousetrap.bindGlobal('f9', function() {
+					viewModel.on_air_submit();
+				});
+				Mousetrap.bindGlobal('f8', function() {
+					viewModel.next_swimmer();
+				});
+				Mousetrap.bindGlobal('f2', function() {
+					viewModel.import_heat_sheet();
+				});
+
+				Mousetrap.bindGlobal('ctrl+s', function(e) {
+					viewModel.save_heat_to_localstorage();
+					viewModel.clear_all_form_fields();
+					return false;
+				});
+
+				Mousetrap.bindGlobal('alt+c', function(e) {
+					viewModel.gfx_type("8");
+					viewModel.on_air_submit();
+					return false;
+				});
+
+				Mousetrap.bindGlobal('alt+n', function(e) {
+					viewModel.gfx_type("3");
+					return false;
+				});
+
 				ko.bindingHandlers.ko_autocomplete = {
 					init: function (element, params) {
 						$(element).autocomplete(params());
@@ -112,7 +168,7 @@
 					}
 				};
 
-
+				/************ BEGINNING OF VIEWMODEL ***********/
 				var debug_mode = 0;
 				var vm = {
 					race_headings: {
@@ -143,6 +199,29 @@
 						{ lane: "8", school: ko.observable(""), name: ko.observable(""), time: ko.observable("") }
 					]),
 
+					team_scores: ko.observableArray([
+						{ school: "TAS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "SAS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISB", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISM", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "JIS", girls: ko.observable(0), boys: ko.observable(0) },
+						{ school: "ISKL", girls: ko.observable(0), boys: ko.observable(0) },
+					]),
+					/*
+					dynamic: {
+						time: ko.observable(""),
+						show_length: ko.observable(""),
+						current_length: ko.observable(""),
+						split_level: ko.observable(0),
+						show_splits: ko.observable("")
+					},
+
+					splits: ko.observableArray([
+						{ place: "1", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") },
+						{ place: "2", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") },
+						{ place: "3", school: ko.observable(""), name: ko.observable(""), time: ko.observable(""), lane: ko.observable(""), laps: ko.observable("") }
+					]),*/
+
 					/* Clear all form fields - swimmer names, school, time, title and length */
 					clear_all_form_fields: function() {
 						this.swimmers.removeAll();
@@ -151,8 +230,8 @@
 							obj = {lane: ko.observable(laneNumber.toString()), school: ko.observable(""), name: ko.observable(""), time: ko.observable("")};
 							this.swimmers.push(obj);
 						}
-						this.race_headings.title("");
-						this.race_headings.length("");
+						//this.race_headings.title("");
+						//this.race_headings.length("");
 					},
 
 					/* Return ["Preliminaries", "Semifinals", "Finals"] */
@@ -196,6 +275,10 @@
 						return keys;
 					},
 
+					returnTotalLaps: function() {
+						return this.race_headings.length() / 25;
+					},
+
 					/* Increment selected swimmer */
 					next_swimmer: function() {
 						val = parseInt(viewModel.selected_swimmer()) + 1;
@@ -208,7 +291,7 @@
 						obj = [];
 
 						for(var x = 0, len = localStorage.length; x < len; x++) {
-							var key = localStorage.key(x);							
+							var key = localStorage.key(x);
 							if(key.substring(1,2) == "_" || key.substring(2,3) == "_" || key.substring(3,4) == "_") {
 								obj.push({path: key, value: key});
 							}
@@ -232,7 +315,6 @@
 					},
 
 					on_air_submit: function() {
-						console.log("LOL");
 						temp = ko.mapping.toJSON(viewModel);
 						conn.send(temp);
 					},
@@ -269,12 +351,52 @@
 
 						console.log(obj);
 						this.updateHeatList();
+					},
+
+					import_hytek: function() {
+						this.swimmers.removeAll();
+						template = [
+							{ lane: "1", school: "", name: "", time: "" },
+							{ lane: "2", school: "", name: "", time: "" },
+							{ lane: "3", school: "", name: "", time: "" },
+							{ lane: "4", school: "", name: "", time: "" },
+							{ lane: "5", school: "", name: "", time: "" },
+							{ lane: "6", school: "", name: "", time: "" },
+							{ lane: "7", school: "", name: "", time: "" },
+							{ lane: "8", school: "", name: "", time: "" }
+						]
+						var lines = $('#hytek').val().split('\n');
+						console.log(lines);
+						for(var x = 0; x < lines.length; x++) {
+						    split_lines = lines[x].split(/[\s,]+/);
+
+						    if(isNaN(parseInt(split_lines[3])) && split_lines[3].length == 1) split_lines.remove(3);
+
+						    for(var y = 0; y < split_lines.length; y++) {
+						    	if(split_lines[y].indexOf(".") != -1) split_lines.remove(y);
+						    	if(split_lines[y] == '13' || split_lines[y] == '14' || split_lines[y] == '15' || split_lines[y] == '16' || split_lines[y] == '17' || split_lines[y] == '18' || split_lines[y] == '19') split_lines.remove(y);
+						    }
+
+						    school = split_lines.pop();
+						    lane = split_lines.shift();
+						    split_lines.push(split_lines.shift());
+						    name = split_lines.join(" ");
+						    console.log(split_lines);
+						    console.log(lane, school, name);
+
+							template[parseInt(lane-1)].school = school;
+							template[parseInt(lane-1)].name = name;						
+
+						}	
+						for(x = 0; x<8; x++) {
+							this.swimmers.push(template[x]);
+						}
 					}
 
 				};
 
 				vm.preview_image = ko.computed(function() {
-					img_array = ["race_intro", "start_list", "nameplate", "lane_overlay", "winner", "results", "team_scores", "clear", "clear"];
+					img_array = ["race_intro", "start_list", "nameplate", "lane_overlay", "winner", "results", "team_scores", "clear", "clear", "clear"];
 					return "/img/" + img_array[parseInt(this.gfx_type())-1] + ".png";
 				}, vm);
 
@@ -299,6 +421,7 @@
 				setInterval(function() {
 					temp = ko.mapping.toJS(viewModel);
 					delete temp.__ko_mapping__;
+					delete temp.import_hytek;
 					delete temp.preview_image;
 					delete temp.updateHeatList;
 					delete temp.save_heat_to_localstorage;
@@ -384,7 +507,9 @@
 					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="7">Team Scores</label>
 					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="8">CLEAR GRAPHICS</label>
 					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="9">Splits and Running Time</label>
+					<label class="radio"><input type="radio" name='gfx_type' data-bind='checked:gfx_type' value="99">Welcome</label>
 					<a class='btn btn-danger' id='update' data-bind='click:on_air_submit'>On Air <span class='fn_key'>(F9)</span></a>
+					<span id='rtc_status' class="label label-danger" style="display: block;margin-top: 9px;">NO CONNECTION</span>
 				</div>
 			</div>
 
@@ -393,11 +518,11 @@
 				<a class='btn btn-primary' data-bind='click: next_swimmer'>Next Swimmer <span class="fn_key">(F8)</span></a>
 				<a class='btn btn-success' data-bind="click: save_heat_to_localstorage">Save Current Heat</a>
 				<a class='btn btn-default' data-bind="click: clear_all_form_fields">Clear List</a>
+				<a class='btn btn-default btn-sm' data-toggle="modal" data-target="#editScoresModal">Edit Team Scores</a>
 			</div>
 
-			<div class='inline' style='width:400px;margin-top:15px;'>
-				<select size='10' class="form-control inline" style='width:240px;' data-bind="value: selected_heatsheet, options: myItems, optionsText: 'value', optionsValue: 'path'">
-					<option value="Apple">3_Boys_100M_Freestyle_H0.csv</option>
+			<div class='inline' style='width:550px;margin-top:15px;'>
+				<select id='heats_list' size='10' class="form-control inline" style='width:370px;' data-bind="value: selected_heatsheet, options: myItems, optionsText: 'value', optionsValue: 'path'">
 					<option value="Banana">Banana</option>
 					<option value="Orange">Orange</option>
 					<option value="Pear">Pear</option>
@@ -411,27 +536,59 @@
 				</div>
 			</div>
 
-			<div class='inline' style='width:220px;margin-top:15px;'>
+			<!-- <div class='inline' style='width:220px;margin-top:15px;'>
 				<textarea class="form-control" rows="8" style='font-size: 12px;'></textarea>
 				<a class='btn btn-default' style='margin-top:5px;' onclick="reset_count()">Clear</a>
 				<a class='btn btn-primary' style='margin-top:5px;' onclick="reset_count()">Import <span class="fn_key">(F2)</span></a>
 
-			</div>
+			</div> -->
 		</div>
 
-		<div class="inline" id="controls_right_serial" style=''>
-			<code>LOL</code>
+		<div class="inline" id="controls_right_serial" style='height:400px;'>
 			<code>LOL</code>
 			<a class='btn btn-primary' style='margin-top:5px;' data-bind="click: getAutocompleteNames">Import Selected <span class="fn_key">(F2)</span></a>
-
-
+		</div>
+		<div style='position: absolute;top: 430px;right: 196px;'>
+			<textarea id='hytek' rows="10" cols="64"></textarea>
+			<br>
+			<a class='btn btn-primary' style='margin-top:5px;' data-bind='click: import_hytek'>Import HyTek</a>
 		</div>
 
 
 
 
-		
-		
-		
+
+		<div id='editScoresModal' class="modal fade">
+			<div class="modal-dialog" style='width:300px;'>
+				<div class="modal-content">
+					<div class="modal-header">
+						<button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+						<h4 class="modal-title">Edit Team Scores</h4>
+					</div>
+					<div class="modal-body">
+							<p style='width:50px;display:inline-block;font-weight:bold;text-align: right;'></p>
+							<p style='width:100px;display:inline-block;padding:0 10px;font-weight:bold'>Girls</p>
+							<p style='width:100px;display:inline-block;padding:0 10px;font-weight:bold'>Boys</p>
+
+						<div data-bind='foreach:team_scores'>
+							<p style='width:50px;display:inline-block;font-weight:bold;text-align: right;' data-bind='text: school'></p>
+							<div style='width:100px;display:inline-block;padding:0 10px;'>
+								<input type="text" class="form-control input-sm" placeholder="Girls" data-bind="value: girls, valueUpdate: 'afterkeydown'">
+
+							</div>
+							<div style='width:100px;display:inline-block;padding:0 10px;'>
+								<input type="text" class="form-control input-sm" placeholder="Boys" data-bind="value: boys, valueUpdate: 'afterkeydown'">
+							</div>
+							<br>
+						</div>
+
+					</div>
+					<div class="modal-footer">
+						<a class="btn btn-default" data-dismiss="modal">Close</a>
+						<a class="btn btn-primary" data-dismiss="modal">Save</a>
+					</div>
+				</div><!-- /.modal-content -->
+			</div><!-- /.modal-dialog -->
+		</div><!-- /.modal -->
 	</body>
 </html>

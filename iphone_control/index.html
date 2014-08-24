@@ -1,0 +1,90 @@
+<!doctype html>
+<html style='overflow:hidden;background-color:rgb(0,255,33);'>
+	<head>
+		<meta charset="UTF-8">
+		<title>IASAS Swimming 2014 iPhone Control</title>
+		<link rel="shortcut icon" href="./img/favicon.png"/>
+		<link rel="stylesheet" href="../todc-bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="../todc-bootstrap/css/todc-bootstrap.min.css">
+
+		<!--<link rel="stylesheet/less" type="text/css" href="style-displayer.less">-->
+		<link href='http://fonts.googleapis.com/css?family=Open+Sans:400,600,700,800' rel='stylesheet' type='text/css'>
+
+		<script type="text/javascript">var less=less||{};less.env='development';</script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
+		<script src="//code.jquery.com/jquery-latest.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>		
+		<script src="http://blogs.tas.edu.tw/softball/js/worldclock.js"></script>		
+		<script src="http://jquery-textfill.github.io/jquery-textfill/jquery.textfill.min.js"></script>
+<meta name="viewport" content="width=device-width, user-scalable=no">
+		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>
+
+		<script>
+			$(document).ready(function() {
+				var obj;	
+				$("#gfx-1").click(function() {
+					obj = {"gfx_type": "1"};
+					saveToFile(obj);
+					$("#text").html(JSON.stringify(obj));
+				});
+				$("#gfx-2").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+				$("#gfx-3").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+				$("#gfx-4").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+				$("#gfx-5").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+				$("#gfx-6").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+				$("#gfx-7").click(function() {
+					obj = {"gfx_type": "1"};
+				});
+
+				function saveToFile(obj) {
+					var data = new FormData();
+					data.append("data" , JSON.stringify(obj));
+					var xhr = (window.XMLHttpRequest) ? new XMLHttpRequest() : new activeXObject("Microsoft.XMLHTTP");
+					xhr.open( 'post', './saver.php', true );
+					xhr.send(data);
+				}
+			});
+		</script>
+
+		<style type="text/css">
+			.col-xs-6 {
+				height:100px;
+
+			}
+		</style>
+		<!-- LANE OVERLAY STYLES -->
+	</head>
+
+	<body style=''>
+		<div class='container'>
+			<div class="row">
+				<div class="col-xs-6" id='gfx-1' style='background-color:black'></div>
+				<div class="col-xs-6" id='gfx-2' style='background-color:blue'></div>
+			</div>
+			<div class="row">
+				<div class="col-xs-6" id='gfx-3' style='background-color:yellow'></div>
+				<div class="col-xs-6" id='gfx-4' style='background-color:red'></div>				
+			</div>
+			<div class="row">
+				<div class="col-xs-6" id='gfx-5' style='background-color:green'></div>
+				<div class="col-xs-6" id='gfx-6' style='background-color:gold'></div>				
+			</div>
+			<div class="row">
+				<div class="col-xs-6" id='gfx-7' style='background-color:lime'></div>
+				<div class="col-xs-6" id='gfx-8' style='background-color:maroon'></div>				
+			</div>
+			<p id='text'>Text</p>
+		</div>
+	</body>
+</html>

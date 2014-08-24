@@ -1,0 +1,49 @@
+   1               		.file	"main.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	main
+  18               	main:
+  19               	.LFB6:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LM2:
+  24 0000 B99A      		sbi 55-32,1
+  25               	.LM3:
+  26 0002 82E0      		ldi r24,lo8(2)
+  27               	.L2:
+  28               	.LM4:
+  29 0004 EFE3      		 ldi r30,lo8(1599)
+  30 0006 F6E0      	    ldi r31,hi8(1599)
+  31 0008 3197      	    1:sbiw r30,1
+  32 000a 01F4      	    brne 1b
+  33 000c 0000      		nop
+  34               	.LM5:
+  35 000e 88BB      		out 56-32,r24
+  36               	.LM6:
+  37 0010 EFE3      		 ldi r30,lo8(1599)
+  38 0012 F6E0      	    ldi r31,hi8(1599)
+  39 0014 3197      	    1:sbiw r30,1
+  40 0016 01F4      	    brne 1b
+  41 0018 0000      		nop
+  42               	.LM7:
+  43 001a 18BA      		out 56-32,__zero_reg__
+  44 001c 00C0      		rjmp .L2
+  45               	.LFE6:
+  71               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:2      *ABS*:0000003f __SREG__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:3      *ABS*:0000003e __SP_H__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:4      *ABS*:0000003d __SP_L__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:5      *ABS*:00000034 __CCP__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\test\AppData\Local\Temp/ccvhGAtq.s:18     .text:00000000 main
+
+NO UNDEFINED SYMBOLS

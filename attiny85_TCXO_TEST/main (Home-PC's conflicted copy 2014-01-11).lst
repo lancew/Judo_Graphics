@@ -1,0 +1,135 @@
+   1               		.file	"main.c"
+   2               	__SREG__ = 0x3f
+   3               	__SP_H__ = 0x3e
+   4               	__SP_L__ = 0x3d
+   5               	__CCP__  = 0x34
+   6               	__tmp_reg__ = 0
+   7               	__zero_reg__ = 1
+  15               	.Ltext0:
+  16               	.global	main
+  18               	main:
+  19               	.LFB6:
+  20               	.LM1:
+  21               	/* prologue: function */
+  22               	/* frame size = 0 */
+  23               	.LM2:
+  24 0000 B89A      		sbi 55-32,0
+  25               	.LM3:
+  26 0002 B99A      		sbi 55-32,1
+  27               	.LM4:
+  28 0004 BC9A      		sbi 55-32,4
+  29               	.LM5:
+  30 0006 BA98      		cbi 55-32,2
+  31               	.LM6:
+  32 0008 BB98      		cbi 55-32,3
+  33               	.LM7:
+  34 000a C39A      		sbi 56-32,3
+  35               	.LM8:
+  36               	/* #APP */
+  37               	 ;  28 "main.c" 1
+  38 000c F894      		cli
+  39               	 ;  0 "" 2
+  40               	.LM9:
+  41               	/* #NOAPP */
+  42 000e 85B7      		in r24,85-32
+  43 0010 8360      		ori r24,lo8(3)
+  44 0012 85BF      		out 85-32,r24
+  45               	.LM10:
+  46 0014 8BB7      		in r24,91-32
+  47 0016 8064      		ori r24,lo8(64)
+  48 0018 8BBF      		out 91-32,r24
+  49               	.LM11:
+  50               	/* #APP */
+  51               	 ;  32 "main.c" 1
+  52 001a 7894      		sei
+  53               	 ;  0 "" 2
+  54               	/* #NOAPP */
+  55               	.L6:
+  56               	.LM12:
+  57 001c B39B      		sbis 54-32,3
+  58 001e 00C0      		rjmp .L2
+  59               	.LM13:
+  60 0020 C498      		cbi 56-32,4
+  61               	.LM14:
+  62 0022 8091 0000 		lds r24,count
+  63 0026 9091 0000 		lds r25,(count)+1
+  64 002a 815B      		subi r24,lo8(1201)
+  65 002c 9440      		sbci r25,hi8(1201)
+  66 002e 00F0      		brlo .L3
+  67               	.LM15:
+  68 0030 C09A      		sbi 56-32,0
+  69 0032 00C0      		rjmp .L7
+  70               	.L3:
+  71               	.LM16:
+  72 0034 C098      		cbi 56-32,0
+  73               	.LM17:
+  74 0036 C19A      		sbi 56-32,1
+  75 0038 00C0      		rjmp .L6
+  76               	.L2:
+  77               	.LM18:
+  78 003a C49A      		sbi 56-32,4
+  79               	.LM19:
+  80 003c C098      		cbi 56-32,0
+  81               	.L7:
+  82               	.LM20:
+  83 003e C198      		cbi 56-32,1
+  84 0040 00C0      		rjmp .L6
+  85               	.LFE6:
+  87               	.global	__vector_1
+  89               	__vector_1:
+  90               	.LFB7:
+  91               	.LM21:
+  92 0042 1F92      		push __zero_reg__
+  93 0044 0F92      		push r0
+  94 0046 0FB6      		in r0,__SREG__
+  95 0048 0F92      		push r0
+  96 004a 1124      		clr __zero_reg__
+  97 004c 8F93      		push r24
+  98 004e 9F93      		push r25
+  99               	/* prologue: Signal */
+ 100               	/* frame size = 0 */
+ 101               	.LM22:
+ 102 0050 1092 0000 		sts (count)+1,__zero_reg__
+ 103 0054 1092 0000 		sts count,__zero_reg__
+ 104 0058 00C0      		rjmp .L9
+ 105               	.L10:
+ 106               	.LM23:
+ 107 005a 8091 0000 		lds r24,count
+ 108 005e 9091 0000 		lds r25,(count)+1
+ 109 0062 0196      		adiw r24,1
+ 110 0064 9093 0000 		sts (count)+1,r25
+ 111 0068 8093 0000 		sts count,r24
+ 112               	.L9:
+ 113               	.LM24:
+ 114 006c B299      		sbic 54-32,2
+ 115 006e 00C0      		rjmp .L10
+ 116               	/* epilogue start */
+ 117               	.LM25:
+ 118 0070 9F91      		pop r25
+ 119 0072 8F91      		pop r24
+ 120 0074 0F90      		pop r0
+ 121 0076 0FBE      		out __SREG__,r0
+ 122 0078 0F90      		pop r0
+ 123 007a 1F90      		pop __zero_reg__
+ 124 007c 1895      		reti
+ 125               	.LFE7:
+ 127               	.global	count
+ 128               	.global	count
+ 129               		.section .bss
+ 132               	count:
+ 133 0000 0000      		.skip 2,0
+ 166               	.Letext0:
+DEFINED SYMBOLS
+                            *ABS*:00000000 main.c
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:2      *ABS*:0000003f __SREG__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:3      *ABS*:0000003e __SP_H__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:4      *ABS*:0000003d __SP_L__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:5      *ABS*:00000034 __CCP__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:6      *ABS*:00000000 __tmp_reg__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:7      *ABS*:00000001 __zero_reg__
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:18     .text:00000000 main
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:132    .bss:00000000 count
+C:\Users\test\AppData\Local\Temp/ccH6EKO9.s:89     .text:00000042 __vector_1
+
+UNDEFINED SYMBOLS
+__do_clear_bss

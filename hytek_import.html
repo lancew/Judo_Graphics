@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8">
+		<title>IASAS Swimming 2014 Controller</title>
+		<link rel="shortcut icon" href="./img/favicon.png"/>
+
+		<link rel="stylesheet" href="./todc-bootstrap/css/bootstrap.min.css">
+		<link rel="stylesheet" href="./todc-bootstrap/css/todc-bootstrap.min.css">
+		<link rel="stylesheet" href="jquery-ui-1.10.4.custom.min.css">
+		<link rel="stylesheet/less" type="text/css" href="style.less">
+
+		<script type="text/javascript">var less=less||{};less.env='development';</script>
+		<script src="//code.jquery.com/jquery-latest.min.js"></script>
+		<script src="//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout/3.0.0/knockout-min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/less.js/1.5.0/less.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/knockout.mapping/2.4.1/knockout.mapping.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/underscore.js/1.5.2/underscore-min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/typeahead.js/0.9.3/typeahead.min.js"></script>
+		<script src="//cdnjs.cloudflare.com/ajax/libs/mousetrap/1.4.6/mousetrap.min.js"></script>
+		<script src="https://rawgithub.com/ccampbell/mousetrap/master/plugins/global-bind/mousetrap-global-bind.min.js"></script>
+
+		<script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+
+		<script src="http://cdn.peerjs.com/0.3/peer.js"></script>		
+		<script src="./static/autobahn.min.js"></script>
+
+
+		<script>
+			$(document).ready(function() {
+			});
+		</script>
+
+	</head>
+	<body>
+		<h4>Race Title</h4>
+		<input type="text" class="form-control" placeholder="Race Title" data-bind="value: race_headings.title, valueUpdate: 'afterkeydown', ko_autocomplete: { source: $root.getAutocompleteRaces(), delay: 0, autoFocus: true}, event: { blur: $root.fillLengthBasedOnRace }">
+		<div id='field_match'>
+			<h4>Match</h4>
+			<input type="text" class="form-control" placeholder="Heat #, Semi, Final" data-bind="value: race_headings.match, valueUpdate: 'afterkeydown', ko_autocomplete: { source: $root.getAutocompleteMatches(), delay: 0, autoFocus: true}">
+		</div>
+		<div id='field_length'>
+			<h4>Length</h4>
+			<input type="text" class="form-control" placeholder="Meters" data-bind="value: race_headings.length, valueUpdate: 'afterkeydown'">
+		</div>
+
+	</body>
+</html>

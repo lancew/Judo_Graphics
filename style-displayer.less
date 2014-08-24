@@ -15,13 +15,21 @@ body {line-height:1;font-family:Open Sans;}
 @row_height: 34px;
 @school_icon_paddingX: 10px;
 @school_icon_paddingY: 6px;
-@school_name_font_size: 15pt;
-@swimmer_name_font_size: 16pt;
-
+@school_name_font_size: 17pt;
+@swimmer_name_font_size: 18pt;
+@header_font_size: 26pt;
+@nameplate_font_size: 23pt;
 
 @font-face {
 font-family: London2012;
 src: url('static/LONDON_FONT.TTF');
+}
+
+.zoomin {
+	zoom: 1.22;
+margin-left: -85px;
+	margin-top: -100px;
+	positioN:absolute;
 }
 
 .global_reset {
@@ -40,7 +48,7 @@ src: url('static/LONDON_FONT.TTF');
 	h1 {
 		.global_reset;
 		font-family: London2012;
-		font-size: 23pt;
+		font-size: @header_font_size;
 		margin-top: 288px;
 		margin-left: 255px;
 		color: white;
@@ -93,6 +101,10 @@ src: url('static/LONDON_FONT.TTF');
 	}
 }
 
+.invisible {
+  opacity: 0;
+}
+
 #results {
 	.global_WxH;
 	.results_start_list_h1_h2;
@@ -130,8 +142,8 @@ src: url('static/LONDON_FONT.TTF');
 	h2 {
 		position:absolute;
 		font-size:17pt;
-		margin-top:581px;
-		margin-left:279px;
+		margin-top:580px;
+		margin-left:280px;
 		color:#EEEEEE;
 		font-weight:600;
 	}
@@ -139,8 +151,8 @@ src: url('static/LONDON_FONT.TTF');
 		position:absolute;
 		font-family:London2012;
 		font-weight:normal;
-		font-size:20pt;
-		margin-top:580px;
+		font-size:@nameplate_font_size;
+		margin-top:578px;
 		margin-left:355px;
 		text-shadow: 2px 2px 7px rgba(0, 0, 0, 0.81);
 	}
@@ -155,7 +167,7 @@ src: url('static/LONDON_FONT.TTF');
 	h1 {
 		.global_reset;
 		font-family: London2012;
-		font-size: 23pt;
+		font-size: @header_font_size;
 		margin-top: 525px;
 		margin-left: 255px;
 		color: white;
@@ -165,7 +177,7 @@ src: url('static/LONDON_FONT.TTF');
 		.global_reset;
 		font-family: Open Sans;
 		font-weight:700;
-		font-size: 18pt;
+		font-size: 19pt;
 		margin-top: 565px;
 		margin-left: 245px;
 		color: #6B6B6B;
@@ -194,7 +206,7 @@ src: url('static/LONDON_FONT.TTF');
 	h1 {
 		.global_reset;
 		font-family: London2012;
-		font-size: 23pt;
+		font-size: @header_font_size;
 		margin-top: 525px+@margin-top_offset;
 		margin-left: 255px+@margin-left_offset;
 		color: white;
@@ -247,9 +259,6 @@ src: url('static/LONDON_FONT.TTF');
 #team_scores {
 	.global_WxH;
 	.results_start_list_h1_h2;
-	h1 {
-		margin-top: 324px;
-	}
 	h2 {
 		margin-top: 364px;
 	}
@@ -257,7 +266,7 @@ src: url('static/LONDON_FONT.TTF');
 		.global_text_blur;
 		margin-left:40px;
 		font-weight:600;
-		font-size: 24px;
+		font-size: 28px;
 		float:left;
 	}
 	span { /* School Mascot */
@@ -269,7 +278,7 @@ src: url('static/LONDON_FONT.TTF');
 	}
 	h5 { /* Points */
 		.global_text_blur;
-		font-size: @swimmer_name_font_size;
+		font-size: 21pt;
 		font-weight:600;
 		float:right;
 		margin-right:15px;
@@ -319,13 +328,96 @@ src: url('static/LONDON_FONT.TTF');
 
 
 
-.ng {
-	background:url(static/ng_100px.png) no-repeat;
-	background-position:@school_icon_paddingX @school_icon_paddingY;
-	background-size: 25px 25px;
-}
-.bai {
-	background:url(static/bai_100px.png) no-repeat;
-	background-position:@school_icon_paddingX @school_icon_paddingY;
-	background-size: 25px 25px;
+
+
+
+#dynamic {
+	> img {
+		position:absolute;
+	}
+	ul img {
+		float:left;
+		padding-top:4px;
+		padding-left:5px;
+		padding-right:3px;
+		width:20px;
+	}
+
+	#split_container {
+		position:absolute;
+		top:0;
+		line-height:27px;
+		font-family:Open Sans;
+		font-weight:600;
+		width:314px;
+		margin-top:126px;
+		margin-left:171px;
+		color:white;
+	}
+
+	#meters {
+		position: absolute;
+		top: 0px;
+		font-size: 25px;
+		font-weight: bold;
+		font-style: italic;
+		margin-left: 747px;
+		margin-top: 581px;
+		text-align: right;
+		width: 80px;
+		color: #222;
+		padding-right: 10px;
+	}
+
+	#time {
+		position:absolute;top:0;
+		font-size:29px;
+		font-weight:bold;
+		font-style:italic;
+		margin-left:667px;
+		margin-top:610px;
+		text-align:right;
+		width:120px;
+		color:#222;
+		padding-right:10px;
+	}
+
+	.lane {
+		font-weight:bold;
+		float:left;
+		width:28px;
+		text-align:center;
+	}
+
+	.time {
+		display:inline-block;
+		text-align:right;
+		width: 64px;
+		font-size: 17px;
+		margin-right: 5px;
+	}
+
+	.split_row {
+		height:27px;
+		display:block;
+		margin-bottom:1px;
+	}
+
+	.school_and_name {
+		width:210px;
+		display:inline-block;
+	}
+
+	.school {
+		color:rgba(255,255,255,0.8);
+		font-weight:400;
+		width:65px;
+		display:block;
+		float:left;
+	}
+
+	.name {
+		font-size:18px;
+		overflow:hidden;
+	}
 }
